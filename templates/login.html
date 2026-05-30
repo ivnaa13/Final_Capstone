@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — HR System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy:      #1e3a5f;
+            --navy-dark: #162d4a;
+            --navy-mid:  #2d4a7a;
+            --bg-outer:  #dce4ef;
+            --white:     #ffffff;
+            --border:    #d0d8e4;
+            --text:      #1e3a5f;
+            --muted:     #7a8fa6;
+            --red:       #e74c3c;
+            --font:      'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-outer);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .outer-box {
+            background: var(--navy);
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 60px rgba(30,58,95,.35);
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 40px 36px 36px;
+            width: 100%;
+            max-width: 360px;
+            border: 2px solid #4a7ab5;
+        }
+
+        .card-header { text-align: center; margin-bottom: 28px; }
+        .card-header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .card-header p { font-size: .8rem; color: var(--muted); }
+
+        .alert-box {
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            font-size: .8rem;
+        }
+        .alert-box ul { list-style: none; }
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: var(--red);
+        }
+        .alert-error li::before { content: '⚠ '; }
+        .alert-info {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e40af;
+        }
+        .alert-info li::before { content: 'ℹ '; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: .82rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .input-wrap { position: relative; }
+        .form-control {
+            width: 100%;
+            background: var(--white);
+            border: none;
+            border-bottom: 1.5px solid var(--border);
+            color: var(--text);
+            padding: 9px 32px 9px 0;
+            font-size: .88rem;
+            font-family: var(--font);
+            outline: none;
+            transition: border-color .2s;
+        }
+        .form-control:focus { border-bottom-color: var(--navy); }
+        .form-control::placeholder { color: #b8c8d8; }
+
+        .toggle-pw {
+            position: absolute; right: 0; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            cursor: pointer; color: var(--muted);
+            font-size: .78rem; padding: 4px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: var(--navy-dark);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: .9rem;
+            font-weight: 700;
+            font-family: var(--font);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background .2s, transform .15s;
+        }
+        .btn-login:hover { background: var(--navy-mid); transform: translateY(-1px); }
+
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: .75rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .info-text span {
+            display: inline-block;
+            margin-top: 4px;
+            background: #f0f4f8;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: .72rem;
+            color: var(--navy);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="outer-box">
+    <div class="login-card">
+
+        <div class="card-header">
+            <h1>Welcome GARUDA TV</h1>
+            <p>Sign in to your System account</p>
+        </div>
+
+        <!-- form errors -->
+        {% if form.non_field_errors %}
+        <div class="alert-box alert-error">
+            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+
+        <!-- django messages (e.g. after logout) -->
+        {% if messages %}
+        <div class="alert-box alert-info">
+            <ul>{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <div class="input-wrap">
+                    <input type="text" name="username" class="form-control"
+                           placeholder="Enter your username"
+                           value="{{ form.username.value|default:'' }}"
+                           required autofocus>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-wrap">
+                    <input type="password" name="password" id="pw-input"
+                           class="form-control" placeholder="••••••••" required>
+                    <button type="button" class="toggle-pw" id="toggle-pw">👁</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login">Sign In</button>
+        </form>
+
+        <!-- no public register — accounts are created by HRD / IT Admin -->
+        <div class="info-text">
+            Don't have an account?<br>
+            <span>Contact your IT Administrator</span>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const pwInput  = document.getElementById('pw-input');
+    const togglePw = document.getElementById('toggle-pw');
+    togglePw.addEventListener('click', () => {
+        pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
+        togglePw.textContent = pwInput.type === 'password' ? '👁' : '🙈';
+    });
+</script>
+
+</body>
+</html>

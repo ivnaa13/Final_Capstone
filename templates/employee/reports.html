@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Details — {{ month_name }} {{ year }}{% endblock %}
+{% block nav_emp_reports %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── BACK LINK ── */
+.back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .82rem; color: var(--muted);
+    text-decoration: none; margin-bottom: 18px;
+    transition: color .18s;
+}
+.back-link:hover { color: var(--accent-light); }
+
+/* ── PAGE HEADER ── */
+.page-hd {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 22px; flex-wrap: wrap; gap: 14px;
+}
+.page-hd h1 { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.page-hd p  { font-size: .82rem; color: var(--muted); }
+
+/* Period selector */
+.period-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.period-sel {
+    padding: 8px 30px 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: .84rem;
+    font-family: inherit; color: var(--text);
+    background: #162033; cursor: pointer; outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%238aaac8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    min-width: 140px;
+    transition: border-color .18s;
+}
+.period-sel:focus { border-color: var(--accent); }
+.period-sel option { background: #162033; color: var(--text); }
+
+/* ── SUMMARY STRIP ── */
+.summary-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px; margin-bottom: 22px;
+}
+.ss-card {
+    background: var(--navy-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+    text-align: center;
+    transition: background var(--transition);
+}
+.ss-card:hover { background: var(--navy-hover); }
+.ss-label {
+    font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); margin-bottom: 10px;
+}
+.ss-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+.ss-card.c-present .ss-value { color: #4ade80; }
+.ss-card.c-late    .ss-value { color: #fcd34d; }
+.ss-card.c-absent  .ss-value { color: #fca5a5; }
+.ss-card.c-leave   .ss-value { color: #93c5fd; }
+.ss-card.c-rate    .ss-value { color: var(--text); font-size: 1.5rem; }
+
+/* ── TABLE CARD ── */
+.tbl-card {
+    background: var(--navy-light); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+}
+.tbl-hd {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 12px;
+}
+.tbl-hd h3 { font-size: .95rem; font-weight: 700; color: var(--text); }
+
+/* Download PDF button */
+.btn-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 20px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: .83rem;
+    font-weight: 700; font-family: inherit;
+    cursor: pointer; text-decoration: none; transition: all .2s;
+}
+.btn-dl:hover { background: var(--accent-light); transform: translateY(-1px); }
+
+/* Table overrides */
+.tbl-card th { background: rgba(255,255,255,0.04); white-space: nowrap; }
+
+.td-mono { font-family: monospace; font-size: .81rem !important; }
+.td-mute { color: var(--muted) !important; }
+
+/* empty */
+.empty-row td { text-align: center; padding: 50px !important; color: var(--muted); font-size: .88rem; }
+
+@media(max-width:1000px){ .summary-strip{ grid-template-columns: repeat(3,1fr); } }
+@media(max-width:700px) { .summary-strip{ grid-template-columns: repeat(2,1fr); } }
+</style>
+{% endblock %}
+
+{% block emp_content %}
+
+<a href="{% url 'employee-reports' %}" class="back-link">
+    ← Back to Reports
+</a>
+
+<div class="page-hd">
+    <div>
+        <h1>Attendance Details</h1>
+        <p>— Full Record for {{ user.get_full_name|default:user.username }}</p>
+    </div>
+
+    <form method="get" id="period-form" class="period-form">
+        <select name="month" class="period-sel"
+                onchange="document.getElementById('period-form').submit()">
+            {% for mc in month_choices %}
+            <option value="{{ mc.value }}"
+                    {% if mc.value == selected_month %}selected{% endif %}>
+                {{ mc.label }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <select name="year" class="period-sel"
+                onchange="document.getElementById('period-form').submit()">
+            {% for y in year_choices %}
+            <option value="{{ y }}"
+                    {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="summary-strip">
+    <div class="ss-card c-present">
+        <div class="ss-label">Present</div>
+        <div class="ss-value">{{ summary.present }}</div>
+    </div>
+    <div class="ss-card c-late">
+        <div class="ss-label">Late</div>
+        <div class="ss-value">{{ summary.late }}</div>
+    </div>
+    <div class="ss-card c-absent">
+        <div class="ss-label">Absent</div>
+        <div class="ss-value">{{ summary.absent }}</div>
+    </div>
+    <div class="ss-card c-leave">
+        <div class="ss-label">Permit</div>
+        <div class="ss-value">{{ summary.leave }}</div>
+    </div>
+    <div class="ss-card c-rate">
+        <div class="ss-label">Attendance Rate</div>
+        <div class="ss-value">{{ summary.rate }}%</div>
+    </div>
+</div>
+
+<div class="tbl-card">
+    <div class="tbl-hd">
+        <h3>— {{ attendances|length }} record(s)</h3>
+        <a href="{% url 'employee-report-pdf' %}?month={{ selected_month }}&year={{ selected_year }}"
+           class="btn-dl" target="_blank">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2
+                         h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Download PDF
+        </a>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Check-In</th>
+                    <th>Check-In Location</th>
+                    <th>Check-Out</th>
+                    <th>Check-Out Location</th>
+                    <th>Work Duration</th>
+                    <th>Overtime</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for att in attendances %}
+                <tr>
+                    <td class="td-mono">{{ att.date|date:"d-m-Y" }}</td>
+                    <td class="td-mute">{{ att.date|date:"D" }}</td>
+
+                    <td class="td-mono">
+                        {% if att.check_in %}
+                            <span style="color:#4ade80;font-weight:600;">{{ att.check_in|time:"H:i" }}</span>
+                        {% else %}<span class="td-mute">—</span>{% endif %}
+                    </td>
+
+                    <td style="font-size:.76rem;max-width:160px;">
+                        {% if att.check_in_address %}
+                            <span class="td-mute" title="{{ att.check_in_address }}">
+                                {{ att.check_in_address|truncatechars:30 }}
+                            </span>
+                        {% elif att.check_in_lat %}
+                            <span class="td-mute">{{ att.check_in_lat|floatformat:4 }}, {{ att.check_in_lng|floatformat:4 }}</span>
+                        {% else %}<span class="td-mute">—</span>{% endif %}
+                    </td>
+
+                    <td class="td-mono">
+                        {% if att.check_out %}
+                            <span style="color:#93c5fd;font-weight:600;">{{ att.check_out|time:"H:i" }}</span>
+                        {% else %}<span class="td-mute">—</span>{% endif %}
+                    </td>
+
+                    <td style="font-size:.76rem;max-width:160px;">
+                        {% if att.check_out_address %}
+                            <span class="td-mute" title="{{ att.check_out_address }}">
+                                {{ att.check_out_address|truncatechars:30 }}
+                            </span>
+                        {% elif att.check_out_lat %}
+                            <span class="td-mute">{{ att.check_out_lat|floatformat:4 }}, {{ att.check_out_lng|floatformat:4 }}</span>
+                        {% else %}<span class="td-mute">—</span>{% endif %}
+                    </td>
+
+                    <td>{% if att.duration %}<span style="font-weight:500;">{{ att.duration }}</span>{% else %}<span class="td-mute">—</span>{% endif %}</td>
+
+                    <td>{% if att.overtime %}<span style="color:#fcd34d;font-weight:600;">{{ att.overtime }}</span>{% else %}<span class="td-mute">—</span>{% endif %}</td>
+
+                    <td>
+                        {% if att.date == today and not att.check_in %}
+                            <span class="badge badge-gray">Today</span>
+                        {% elif att.status == 'present' %}
+                            <span class="badge badge-green">Present</span>
+                        {% elif att.status == 'late' %}
+                            <span class="badge badge-yellow">Late</span>
+                        {% elif att.status == 'absent' %}
+                            <span class="badge badge-red">Absent</span>
+                        {% elif att.status == 'leave' %}
+                            <span class="badge badge-blue">Permit</span>
+                        {% else %}
+                            <span class="badge badge-gray">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="empty-row">
+                    <td colspan="9">
+                        📭 No attendance records for {{ month_name }} {{ year }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

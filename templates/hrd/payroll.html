@@ -1,0 +1,1153 @@
+{% extends 'base.html' %}
+
+{% block title %}Payroll Management — HRD Garuda TV{% endblock %}
+{% block nav_hrd_payroll %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── PAGE BACKGROUND ─────────────────────────── */
+    #page-content { background: #1a2744; }
+
+    /* ── PAGE HEADER ─────────────────────────────── */
+    .page-hdr-payroll {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .page-hdr-payroll h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #e8f0fb;
+    }
+    .page-hdr-payroll p {
+        font-size: .82rem;
+        color: #8aaac8;
+        margin-top: 4px;
+    }
+    .breadcrumb-payroll {
+        font-size: .75rem;
+        color: #4d6a8a;
+        margin-bottom: 6px;
+    }
+    .breadcrumb-payroll span { color: #8aaac8; }
+
+    /* ── INPUT FORM CARD (top section like screenshot) ── */
+    .payroll-input-card {
+        background: #243460;
+        border-radius: 14px;
+        padding: 24px 28px 28px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 4px 20px rgba(8,20,40,0.30);
+        margin-bottom: 20px;
+    }
+    .payroll-form-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 18px;
+    }
+    .payroll-form-row {
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+    .form-group-dark { flex: 1; min-width: 160px; }
+    .form-group-dark label {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.55);
+        margin-bottom: 7px;
+    }
+    .form-group-dark select,
+    .form-group-dark input {
+        width: 100%;
+        background: #1e2d52;
+        border: 1.5px solid rgba(255,255,255,0.13);
+        border-radius: 9px;
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 11px 38px 11px 14px;
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23ffffff70' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        cursor: pointer;
+        outline: none;
+        transition: border-color .2s;
+    }
+    .form-group-dark select:focus,
+    .form-group-dark input:focus { border-color: rgba(255,255,255,0.38); }
+    .form-group-dark select option { background: #1e2d52; color: #fff; }
+
+    .btn-submit-payroll {
+        background: #3a3a5c;
+        border: none;
+        border-radius: 9px;
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 11px 32px;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: background .2s, transform .15s, box-shadow .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+        align-self: flex-end;
+        height: 44px;
+    }
+    .btn-submit-payroll:hover {
+        background: #4a4a7c;
+        transform: translateY(-1px);
+    }
+    .btn-submit-payroll:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-submit-payroll .spinner {
+        width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        display: none;
+    }
+    .btn-submit-payroll.loading .spinner { display: block; }
+    .btn-submit-payroll.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Summary stats in form card */
+    .form-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 16px;
+    }
+    .form-stat-item {
+        background: rgba(0,0,0,0.15);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 9px;
+        padding: 10px 14px;
+        text-align: center;
+    }
+    .form-stat-num {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+    }
+    .form-stat-lbl {
+        font-size: .65rem;
+        color: rgba(255,255,255,.38);
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        margin-top: 4px;
+    }
+    .form-stat-item.green .form-stat-num { color: #4dcc8a; }
+    .form-stat-item.yellow .form-stat-num { color: #ffc107; }
+    .form-stat-item.red .form-stat-num { color: #f08080; }
+    .form-stat-item.blue .form-stat-num { color: #7eb8ff; }
+
+    /* Current period display */
+    .current-period {
+        background: rgba(45,126,247,0.15);
+        border: 1px solid rgba(45,126,247,0.25);
+        border-radius: 8px;
+        padding: 8px 14px;
+        margin-top: 12px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        font-size: .8rem;
+        color: #7eb8ff;
+        font-weight: 600;
+    }
+    .current-period.visible { display: flex; }
+
+    /* ── TABLE PANEL ─────────────────────────────── */
+    .payroll-right-panel {
+        background: #1e2d52;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.08);
+        overflow: hidden;
+    }
+
+    /* ── EMPTY STATE ─────────────────────────────── */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 72px 24px;
+        text-align: center;
+    }
+    .empty-state-icon {
+        width: 64px; height: 64px;
+        background: rgba(45,126,247,0.12);
+        border: 1px solid rgba(45,126,247,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        color: #4d8ef5;
+        margin-bottom: 16px;
+    }
+    .empty-state h3 {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #c8dff7;
+        margin-bottom: 6px;
+    }
+    .empty-state p {
+        font-size: .78rem;
+        color: rgba(255,255,255,.28);
+        max-width: 260px;
+        line-height: 1.6;
+    }
+
+    /* ── FILTER BAR ──────────────────────────────── */
+    .filter-bar {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        flex-wrap: wrap;
+        background: #1e2d52;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label {
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.10em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.38);
+    }
+    .filter-select {
+        background: #16244a;
+        border: 1.5px solid rgba(255,255,255,0.11);
+        border-radius: 8px;
+        color: #d0e4f7;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 8px 28px 8px 11px;
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffffff55' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        cursor: pointer;
+        min-width: 150px;
+        outline: none;
+        transition: border-color .2s;
+    }
+    .filter-select:focus { border-color: rgba(255,255,255,0.28); }
+    .filter-select option { background: #1e2d52; }
+    .filter-spacer { flex: 1; min-width: 0; }
+    .btn-apply-filter {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: #16244a;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        border-radius: 8px;
+        color: #c8dff7;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: background .2s;
+        white-space: nowrap;
+        height: 38px;
+    }
+    .btn-apply-filter:hover { background: rgba(255,255,255,0.10); color: #fff; }
+
+    /* ── BULK BAR ────────────────────────────────── */
+    .bulk-bar {
+        background: rgba(45,126,247,0.12);
+        border-bottom: 1px solid rgba(45,126,247,0.22);
+        padding: 10px 16px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        color: #c8dff7;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar-spacer { flex: 1; }
+    .btn-bulk {
+        border: none;
+        border-radius: 6px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: opacity .2s;
+    }
+    .btn-bulk:hover { opacity: .85; }
+    .btn-bulk-approve { background: #0e8a4a; color: #fff; }
+    .btn-bulk-draft   { background: rgba(255,193,7,0.25); color: #ffc107; border: 1px solid rgba(255,193,7,0.35); }
+    .btn-bulk-reject  { background: rgba(192,57,43,0.25); color: #f08080; border: 1px solid rgba(192,57,43,0.35); }
+
+    /* ── TABLE ───────────────────────────────────── */
+    .payroll-table { width: 100%; border-collapse: collapse; }
+    .payroll-table thead th {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.45);
+        padding: 12px 14px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        background: #192545;
+        white-space: nowrap;
+    }
+    .payroll-table thead th:first-child { width: 44px; text-align: center; }
+    .payroll-table tbody tr {
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: background .15s;
+    }
+    .payroll-table tbody tr:last-child { border-bottom: none; }
+    .payroll-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+    .payroll-table td {
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #c8dff7;
+        vertical-align: middle;
+    }
+    .payroll-table td:first-child { text-align: center; }
+    .table-checkbox { width: 15px; height: 15px; accent-color: #2d7ef7; cursor: pointer; }
+
+    /* Employee cell */
+    .emp-cell { display: flex; align-items: center; gap: 10px; }
+    .emp-avatar {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        overflow: hidden;
+        background: linear-gradient(135deg, #2d7ef7, #1a4fa8);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 11px; font-weight: 700;
+    }
+    .emp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .emp-name { font-size: 13px; font-weight: 600; color: #e0eefa; }
+    .emp-dept { font-size: 11px; color: rgba(255,255,255,.35); margin-top: 1px; }
+
+    /* Badges */
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .badge-approved { background: rgba(14,138,74,0.20); color: #4dcc8a; border: 1px solid rgba(14,138,74,0.30); }
+    .badge-draft    { background: rgba(255,193,7,0.15);  color: #ffc107; border: 1px solid rgba(255,193,7,0.25); }
+    .badge-reject   { background: rgba(192,57,43,0.20);  color: #f08080; border: 1px solid rgba(192,57,43,0.30); }
+    .badge-pending  { background: rgba(45,126,247,0.16); color: #7eb8ff; border: 1px solid rgba(45,126,247,0.26); }
+    .badge-done     { background: rgba(130,80,255,0.18); color: #c4a8ff; border: 1px solid rgba(130,80,255,0.28); }
+
+    .late-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .late-badge.has-late { color: #f08080; }
+    .late-badge.no-late  { color: rgba(255,255,255,.35); }
+
+    /* NPWP */
+    .npwp-val { font-size: 12px; color: rgba(255,255,255,.45); font-weight: 500; }
+
+    /* Action buttons */
+    .btn-action {
+        background: #16244a;
+        border: 1.5px solid rgba(255,255,255,0.13);
+        border-radius: 7px;
+        color: #c8dff7;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 14px;
+        cursor: pointer;
+        transition: all .2s;
+        white-space: nowrap;
+        margin-right: 3px;
+    }
+    .btn-action:hover { background: #2d7ef7; color: #fff; border-color: #2d7ef7; }
+    .btn-action.approve { background: rgba(14,138,74,.18); border-color: rgba(14,138,74,.28); color: #4dcc8a; }
+    .btn-action.approve:hover { background: #0e8a4a; color: #fff; border-color: #0e8a4a; }
+    .btn-action.reject  { background: rgba(192,57,43,.18); border-color: rgba(192,57,43,.28); color: #f08080; }
+    .btn-action.reject:hover  { background: #c0392b; color: #fff; border-color: #c0392b; }
+    .btn-action.draft   { background: rgba(255,193,7,.15);  border-color: rgba(255,193,7,.25);  color: #ffc107; }
+    .btn-action.draft:hover   { background: rgba(255,193,7,.35); }
+    .btn-action.done    { background: rgba(130,80,255,.15); border-color: rgba(130,80,255,.25); color: #c4a8ff; }
+    .btn-action.done:hover    { background: #8250ff; color: #fff; border-color: #8250ff; }
+
+    /* ── TABLE FOOTER ────────────────────────────── */
+    .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        background: #192545;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .table-info { font-size: 12px; color: rgba(255,255,255,.30); }
+    .pagination-btns { display: flex; gap: 4px; align-items: center; }
+    .page-btn {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        border: 1.5px solid rgba(255,255,255,0.12);
+        background: #16244a;
+        color: #c8dff7;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 12px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+    .page-btn:hover { background: rgba(255,255,255,0.10); }
+    .page-btn.active { background: #2d7ef7; color: #fff; border-color: #2d7ef7; }
+    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── TOAST ───────────────────────────────────── */
+    .toast-container-custom {
+        position: fixed; top: 20px; right: 20px;
+        z-index: 9999;
+        display: flex; flex-direction: column; gap: 8px;
+        pointer-events: none;
+    }
+    .toast-item {
+        display: flex; align-items: flex-start; gap: 10px;
+        background: #0d1f35;
+        border-radius: 11px; padding: 12px 14px;
+        box-shadow: 0 8px 32px rgba(8,20,40,.55);
+        border: 1px solid rgba(255,255,255,.10);
+        pointer-events: auto; min-width: 250px; max-width: 320px;
+        transform: translateX(110%);
+        transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .3s;
+        opacity: 0;
+    }
+    .toast-item.show { transform: translateX(0); opacity: 1; }
+    .toast-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .toast-icon.success { background: rgba(14,138,74,.22); color: #4dcc8a; }
+    .toast-icon.error   { background: rgba(192,57,43,.22); color: #f08080; }
+    .toast-icon.info    { background: rgba(45,126,247,.22); color: #7eb8ff; }
+    .toast-icon.warning { background: rgba(255,193,7,.18);  color: #ffc107; }
+    .toast-body { flex: 1; }
+    .toast-title { font-size: 12.5px; font-weight: 700; color: #e0eefa; }
+    .toast-msg   { font-size: 11.5px; color: rgba(255,255,255,.40); margin-top: 2px; }
+    .toast-close { background: none; border: none; color: rgba(255,255,255,.28); font-size: 14px; cursor: pointer; padding: 0; line-height: 1; transition: color .2s; }
+    .toast-close:hover { color: #fff; }
+
+    /* ── MODAL ───────────────────────────────────── */
+    .modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(8,20,40,.72);
+        backdrop-filter: blur(5px);
+        z-index: 1050;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none;
+        transition: opacity .25s;
+        padding: 16px;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-box {
+        background: #0f2743;
+        border-radius: 18px;
+        width: 100%; max-width: 520px;
+        box-shadow: 0 24px 64px rgba(8,20,40,.65);
+        border: 1px solid rgba(255,255,255,.10);
+        transform: translateY(18px) scale(.97);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        overflow: hidden;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
+    .modal-header {
+        background: rgba(255,255,255,.04);
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        padding: 18px 24px;
+        display: flex; align-items: center; justify-content: space-between;
+        position: sticky; top: 0; z-index: 2;
+    }
+    .modal-header h5 { color: #e0eefa; font-size: 15px; font-weight: 700; margin: 0; }
+    .modal-close-btn {
+        background: rgba(255,255,255,.08); border: none; color: rgba(255,255,255,.55);
+        width: 28px; height: 28px; border-radius: 7px; font-size: 14px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; transition: background .2s;
+    }
+    .modal-close-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+    .modal-body { padding: 22px 24px; }
+
+    .modal-emp-block {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        background: rgba(45,126,247,.10);
+        border: 1px solid rgba(45,126,247,.18);
+        border-radius: 10px;
+        margin-bottom: 18px;
+    }
+    .modal-emp-avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2d7ef7, #1a4fa8);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 14px; font-weight: 700;
+        flex-shrink: 0;
+    }
+    .modal-emp-name { font-size: 15px; font-weight: 700; color: #e0eefa; }
+    .modal-emp-sub  { font-size: 12px; color: rgba(255,255,255,.42); margin-top: 3px; }
+
+    .detail-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(255,255,255,.055);
+        font-size: 13px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: rgba(255,255,255,.42); font-weight: 500; }
+    .detail-value { color: #e0eefa; font-weight: 600; text-align: right; }
+    .detail-value.salary-val { color: #7eb8ff; font-size: 15px; }
+
+    .modal-section-title {
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.30);
+        margin: 16px 0 8px;
+    }
+
+    .modal-status-btns {
+        display: flex;
+        gap: 8px;
+        padding: 16px 24px;
+        border-top: 1px solid rgba(255,255,255,.07);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        background: rgba(0,0,0,.12);
+        position: sticky;
+        bottom: 0;
+    }
+    .btn-modal {
+        border-radius: 8px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13px; font-weight: 700;
+        padding: 8px 18px; cursor: pointer;
+        display: flex; align-items: center; gap: 6px;
+        transition: opacity .2s, transform .15s;
+        border: none;
+    }
+    .btn-modal:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-modal.approve { background: linear-gradient(135deg, #0e8a4a, #0a6b38); color: #fff; }
+    .btn-modal.reject  { background: rgba(192,57,43,.22); border: 1px solid rgba(192,57,43,.35); color: #f08080; }
+    .btn-modal.reject:hover  { background: #c0392b; color: #fff; }
+    .btn-modal.draft   { background: rgba(255,193,7,.18); border: 1px solid rgba(255,193,7,.30); color: #ffc107; }
+    .btn-modal.draft:hover   { background: rgba(255,193,7,.35); }
+    .btn-modal.done    { background: linear-gradient(135deg, #8250ff, #6030cc); color: #fff; }
+    .btn-modal.close-btn { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.50); }
+    .btn-modal.close-btn:hover { background: rgba(255,255,255,.13); color: #fff; }
+
+    /* ── LOADING ─────────────────────────────────── */
+    .table-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 60px 24px;
+        gap: 14px;
+        color: rgba(255,255,255,.35);
+        font-size: .8rem;
+    }
+    .loader-ring {
+        width: 36px; height: 36px;
+        border: 3px solid rgba(45,126,247,.2);
+        border-top-color: #2d7ef7;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+    }
+</style>
+{% endblock %}
+
+{% block hrd_content %}
+
+<!-- Breadcrumb + Title -->
+<div class="page-hdr-payroll">
+    <div>
+        <div class="breadcrumb-payroll">HRD Garuda TV &rsaquo; <span>Payroll Management</span></div>
+        <h1>Payroll Management</h1>
+        <p>Generate and manage employee payroll by period</p>
+    </div>
+</div>
+
+<!-- ── INPUT FORM (Full Width Top Card) ──────────────── -->
+<div class="payroll-input-card">
+    <div class="payroll-form-title">Payroll Input Form</div>
+
+    <form id="payrollForm" onsubmit="submitPayroll(event)">
+        {% csrf_token %}
+        <div class="payroll-form-row">
+            <div class="form-group-dark">
+                <label>Month</label>
+                <select id="selectMonth" name="month">
+                    <option value="1">January</option><option value="2">February</option>
+                    <option value="3">March</option><option value="4">April</option>
+                    <option value="5">May</option><option value="6">June</option>
+                    <option value="7">July</option><option value="8">August</option>
+                    <option value="9">September</option><option value="10">October</option>
+                    <option value="11">November</option><option value="12">December</option>
+                </select>
+            </div>
+            <div class="form-group-dark">
+                <label>Year</label>
+                <select id="selectYear" name="year"></select>
+            </div>
+            <button type="submit" class="btn-submit-payroll" id="btnSubmit">
+                <div class="spinner"></div>
+                <span class="btn-text">Submit</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Summary stats — only shown after generate -->
+    <div class="form-stats" id="formStats" style="display:none;">
+        <div class="form-stat-item green">
+            <div class="form-stat-num" id="statApproved">0</div>
+            <div class="form-stat-lbl">Approved</div>
+        </div>
+        <div class="form-stat-item yellow">
+            <div class="form-stat-num" id="statDraft">0</div>
+            <div class="form-stat-lbl">Draft</div>
+        </div>
+        <div class="form-stat-item red">
+            <div class="form-stat-num" id="statReject">0</div>
+            <div class="form-stat-lbl">Reject</div>
+        </div>
+        <div class="form-stat-item blue">
+            <div class="form-stat-num" id="statDone">0</div>
+            <div class="form-stat-lbl">Done</div>
+        </div>
+    </div>
+
+    <div class="current-period" id="currentPeriodBadge">
+        <i class="bi bi-calendar3"></i>
+        <span id="currentPeriodText">—</span>
+    </div>
+</div>
+
+<!-- ── TABLE AREA ─────────────────────────────────────── -->
+<div class="payroll-right-panel" id="tablePanel">
+
+    <!-- Empty state (default) -->
+    <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon"><i class="bi bi-wallet2"></i></div>
+        <h3>No Payroll Generated Yet</h3>
+        <p>Select a month and year, then click "Submit" to load payroll data from attendance records.</p>
+    </div>
+
+    <!-- Filter bar (hidden until data loaded) -->
+    <div class="filter-bar" id="filterBar" style="display:none;">
+        <div class="filter-group">
+            <label>Department</label>
+            <select class="filter-select" id="filterDept">
+                <option value="">All Departments</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Payroll Status</label>
+            <select class="filter-select" id="filterStatus">
+                <option value="">All Status</option>
+                <option value="Approved">Approved</option>
+                <option value="Draft">Draft</option>
+                <option value="Reject">Reject</option>
+                <option value="Pending">Pending</option>
+                <option value="Done">Done</option>
+            </select>
+        </div>
+        <div class="filter-spacer"></div>
+        <button class="btn-apply-filter" onclick="applyFilter()">
+            <i class="bi bi-funnel-fill"></i> Apply Filter
+        </button>
+    </div>
+
+    <!-- Bulk bar -->
+    <div class="bulk-bar" id="bulkBar">
+        <i class="bi bi-check2-square"></i>
+        <span id="bulkCount">0</span> selected
+        <div class="bulk-bar-spacer"></div>
+        <button class="btn-bulk btn-bulk-approve" onclick="bulkAction('Approved')">
+            <i class="bi bi-check-lg"></i>Approve All
+        </button>
+        <button class="btn-bulk btn-bulk-draft" onclick="bulkAction('Draft')">
+            <i class="bi bi-pencil"></i>Draft All
+        </button>
+        <button class="btn-bulk btn-bulk-reject" onclick="bulkAction('Reject')">
+            <i class="bi bi-x-lg"></i>Reject All
+        </button>
+    </div>
+
+    <!-- Table (hidden until data loaded) -->
+    <div style="overflow-x:auto;" id="tableWrap">
+        <table class="payroll-table" id="payrollTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" class="table-checkbox" id="checkAll"></th>
+                    <th>Employee Name</th>
+                    <th>Position</th>
+                    <th>Working Days</th>
+                    <th>Late / Absent</th>
+                    <th>Payroll Status</th>
+                    <th>NPWP</th>
+                    <th style="text-align:center;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="payrollTbody"></tbody>
+        </table>
+    </div>
+
+    <div class="table-footer" id="tableFooter" style="display:none;">
+        <span class="table-info" id="pageInfo">—</span>
+        <div class="pagination-btns" id="paginationBtns"></div>
+    </div>
+</div>
+
+<!-- ── DETAIL MODAL ───────────────────────────────── -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h5><i class="bi bi-person-lines-fill me-2"></i>Payroll Detail</h5>
+            <button class="modal-close-btn" onclick="closeModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-status-btns" id="modalFooter"></div>
+    </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────── -->
+<div class="toast-container-custom" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ====================================================
+   PAYROLL HRD — Client Logic
+   - Fetches data via Django API endpoints
+   - All status changes are persisted to the database
+   - Shows partial attendance data (even 1 day present)
+   ==================================================== */
+
+// ── State ────────────────────────────────────────────
+let allData = [], filteredData = [], currentPage = 1, selectedIds = new Set();
+const PER_PAGE = 10;
+let currentMonth = null, currentYear = null, currentPayrollPeriodId = null;
+
+// ── Month names ──────────────────────────────────────
+const MONTH_NAMES = ['','January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+// ── Init ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const ys = document.getElementById('selectYear');
+    const now = new Date();
+    for (let y = now.getFullYear() + 1; y >= 2020; y--) {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (y === now.getFullYear()) o.selected = true;
+        ys.appendChild(o);
+    }
+    document.getElementById('selectMonth').value = now.getMonth() + 1;
+
+    document.getElementById('checkAll').addEventListener('change', e => {
+        filteredData.slice((currentPage-1)*PER_PAGE, currentPage*PER_PAGE)
+            .forEach(emp => e.target.checked ? selectedIds.add(emp.payroll_id) : selectedIds.delete(emp.payroll_id));
+        updateBulkBar(); renderTable();
+    });
+});
+
+// ── CSRF helper ──────────────────────────────────────
+function getCSRF() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// ── SUBMIT FORM ───────────────────────────────────────
+// Generates payroll from attendance — includes employees with even 1 day present
+async function submitPayroll(e) {
+    e.preventDefault();
+    const month = parseInt(document.getElementById('selectMonth').value);
+    const year  = parseInt(document.getElementById('selectYear').value);
+    const btn   = document.getElementById('btnSubmit');
+
+    btn.disabled = true; btn.classList.add('loading');
+    selectedIds.clear(); updateBulkBar();
+
+    try {
+        const res = await fetch('{% url "hrd-generate-payroll" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            // include_partial: true → server returns employees with >= 1 attendance record
+            body: JSON.stringify({ month, year, include_partial: true })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            showToast('error', 'Error', data.error || 'Failed to generate payroll');
+            return;
+        }
+
+        currentMonth = month; currentYear = year;
+        currentPayrollPeriodId = data.period_id;
+        allData = data.employees;
+        filteredData = [...allData];
+        currentPage = 1;
+
+        // Show table area
+        document.getElementById('emptyState').style.display  = 'none';
+        document.getElementById('filterBar').style.display   = 'flex';
+        document.getElementById('payrollTable').style.display = '';
+        document.getElementById('tableFooter').style.display  = 'flex';
+
+        populateDeptFilter();
+        updateFormStats();
+
+        document.getElementById('currentPeriodText').textContent =
+            `${MONTH_NAMES[month]} ${year}`;
+        document.getElementById('currentPeriodBadge').classList.add('visible');
+        document.getElementById('formStats').style.display = 'grid';
+
+        renderTable();
+        showToast('success', 'Submit data Successfully',
+            `Payroll Generate Successfully — ${allData.length} record(s) for ${MONTH_NAMES[month]} ${year}`);
+
+    } catch (err) {
+        showToast('error', 'Network Error', 'Could not reach the server');
+        console.error(err);
+    } finally {
+        btn.disabled = false; btn.classList.remove('loading');
+    }
+}
+
+// ── Populate dept filter ──────────────────────────────
+function populateDeptFilter() {
+    const depts = [...new Set(allData.map(e => e.department).filter(Boolean))].sort();
+    const sel = document.getElementById('filterDept');
+    sel.innerHTML = '<option value="">All Departments</option>';
+    depts.forEach(d => {
+        const o = document.createElement('option');
+        o.value = d; o.textContent = d;
+        sel.appendChild(o);
+    });
+}
+
+// ── Update summary stats ─────────────────────────────
+function updateFormStats() {
+    const counts = { Approved:0, Draft:0, Reject:0, Done:0 };
+    allData.forEach(e => { if (counts[e.payroll_status] !== undefined) counts[e.payroll_status]++; });
+    document.getElementById('statApproved').textContent = counts.Approved;
+    document.getElementById('statDraft').textContent    = counts.Draft;
+    document.getElementById('statReject').textContent   = counts.Reject;
+    document.getElementById('statDone').textContent     = counts.Done;
+}
+
+// ── Render table ─────────────────────────────────────
+function renderTable() {
+    const s = (currentPage - 1) * PER_PAGE;
+    const e = Math.min(s + PER_PAGE, filteredData.length);
+    const tbody = document.getElementById('payrollTbody');
+
+    if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:rgba(255,255,255,.25);">
+            <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+            No records found</td></tr>`;
+    } else {
+        tbody.innerHTML = filteredData.slice(s, e).map(buildRow).join('');
+    }
+
+    document.getElementById('pageInfo').textContent = filteredData.length === 0
+        ? 'No entries'
+        : `Showing ${s+1}–${e} of ${filteredData.length} entries`;
+
+    renderPagination();
+    syncCheckboxes();
+}
+
+// ── Build row HTML (matching screenshot column order) ─
+function buildRow(emp) {
+    const initials = (emp.name||'').split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+    const statusCls = {
+        Approved:'badge-approved', Draft:'badge-draft',
+        Reject:'badge-reject', Pending:'badge-pending', Done:'badge-done'
+    }[emp.payroll_status] || 'badge-pending';
+    const statusIcon = {
+        Approved:'bi-check-circle-fill', Draft:'bi-pencil-fill',
+        Reject:'bi-x-circle-fill', Pending:'bi-clock-fill', Done:'bi-trophy-fill'
+    }[emp.payroll_status] || 'bi-clock-fill';
+
+    // Late/Absent badge — show working days progress if month is ongoing
+    const lateAbsent = (emp.late_count||0) > 0 || (emp.absent_days||0) > 0
+        ? `<span class="late-badge has-late"><i class="bi bi-exclamation-circle-fill"></i> ${emp.late_count||0}x late, ${emp.absent_days||0}d absent</span>`
+        : `<span class="late-badge no-late">—</span>`;
+
+    // Action buttons
+    let actionBtns = '';
+    if (['Draft','Pending'].includes(emp.payroll_status)) {
+        actionBtns += `<button class="btn-action approve" onclick="quickAction(${emp.payroll_id},'Approved')" title="Approve"><i class="bi bi-check-lg"></i></button>`;
+        actionBtns += `<button class="btn-action reject"  onclick="quickAction(${emp.payroll_id},'Reject')"   title="Reject"><i class="bi bi-x-lg"></i></button>`;
+    }
+    if (emp.payroll_status === 'Approved') {
+        actionBtns += `<button class="btn-action done" onclick="quickAction(${emp.payroll_id},'Done')" title="Done"><i class="bi bi-trophy"></i></button>`;
+    }
+    actionBtns += `<button class="btn-action" onclick="openDetail(${emp.payroll_id})" title="Detail">Detail</button>`;
+
+    // Working days — show current count even if month not finished
+    const workingDaysDisplay = `<b style="color:#e0eefa;">${emp.working_days||0}</b> <span style="color:rgba(255,255,255,.35);font-size:11.5px;">Days</span>`;
+
+    // Avatar: use photo if available, else initials
+    const avatarContent = emp.photo_url
+        ? `<img src="${emp.photo_url}" alt="${emp.name}">`
+        : initials;
+
+    return `<tr>
+        <td><input type="checkbox" class="table-checkbox row-check" data-id="${emp.payroll_id}"
+            ${selectedIds.has(emp.payroll_id)?'checked':''} onchange="toggleSelect(${emp.payroll_id},this.checked)"></td>
+        <td><div class="emp-cell">
+            <div class="emp-avatar">${avatarContent}</div>
+            <div>
+                <div class="emp-name">${emp.name||'-'}</div>
+                <div class="emp-dept">${emp.department||''}</div>
+            </div>
+        </div></td>
+        <td style="color:rgba(255,255,255,.65);font-size:12.5px;">${emp.position||'-'}</td>
+        <td>${workingDaysDisplay}</td>
+        <td>${lateAbsent}</td>
+        <td><span class="badge-status ${statusCls}"><i class="bi ${statusIcon}"></i> ${emp.payroll_status}</span></td>
+        <td class="npwp-val">${emp.npwp||'-'}</td>
+        <td style="text-align:center;white-space:nowrap;">${actionBtns}</td>
+    </tr>`;
+}
+
+// ── Pagination ────────────────────────────────────────
+function renderPagination() {
+    const total = Math.ceil(filteredData.length / PER_PAGE) || 1;
+    const cont = document.getElementById('paginationBtns');
+    cont.innerHTML = '';
+    const mk = (html, pg, dis, act) => {
+        const b = document.createElement('button');
+        b.className = 'page-btn' + (act?' active':'');
+        b.innerHTML = html; b.disabled = dis;
+        b.onclick = () => { currentPage = pg; renderTable(); };
+        return b;
+    };
+    cont.appendChild(mk('<i class="bi bi-chevron-left"></i>', currentPage-1, currentPage===1, false));
+    for (let i=1; i<=total; i++) {
+        if (total>7 && i>2 && i<total-1 && Math.abs(i-currentPage)>1) {
+            if (i===3||i===total-2) {
+                const sp=document.createElement('span');
+                sp.textContent='…';sp.style.cssText='padding:0 4px;color:rgba(255,255,255,.25);align-self:center;';
+                cont.appendChild(sp);
+            }
+            continue;
+        }
+        cont.appendChild(mk(i, i, false, i===currentPage));
+    }
+    cont.appendChild(mk('<i class="bi bi-chevron-right"></i>', currentPage+1, currentPage===total, false));
+}
+
+// ── Filter ────────────────────────────────────────────
+function applyFilter() {
+    const d = document.getElementById('filterDept').value;
+    const s = document.getElementById('filterStatus').value;
+    filteredData = allData.filter(e => (!d||e.department===d) && (!s||e.payroll_status===s));
+    currentPage = 1; selectedIds.clear(); updateBulkBar(); renderTable();
+    showToast('info', 'Filter Applied', `${filteredData.length} records found`);
+}
+
+// ── Selection ─────────────────────────────────────────
+function toggleSelect(id, ch) { ch ? selectedIds.add(id) : selectedIds.delete(id); updateBulkBar(); syncCheckboxes(); }
+function syncCheckboxes() {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = selectedIds.has(+c.dataset.id));
+    const pg = filteredData.slice((currentPage-1)*PER_PAGE, currentPage*PER_PAGE);
+    document.getElementById('checkAll').checked = pg.length>0 && pg.every(e=>selectedIds.has(e.payroll_id));
+}
+function updateBulkBar() {
+    const n = selectedIds.size;
+    document.getElementById('bulkCount').textContent = n;
+    document.getElementById('bulkBar').classList.toggle('visible', n>0);
+}
+
+// ── Quick action (single row) ─────────────────────────
+async function quickAction(payrollId, status) {
+    await updatePayrollStatus([payrollId], status);
+}
+
+// ── Bulk action ───────────────────────────────────────
+async function bulkAction(status) {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    await updatePayrollStatus(ids, status);
+    selectedIds.clear(); updateBulkBar();
+}
+
+// ── Core: persist status to DB ────────────────────────
+async function updatePayrollStatus(payrollIds, status) {
+    try {
+        const res = await fetch('{% url "hrd-payroll-update-status" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify({ payroll_ids: payrollIds, status })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            showToast('error', 'Update Failed', data.error || 'An error occurred');
+            return;
+        }
+        payrollIds.forEach(pid => {
+            const emp = allData.find(e => e.payroll_id === pid);
+            if (emp) emp.payroll_status = status;
+        });
+        _refresh();
+        updateFormStats();
+        const icons  = { Approved:'✓', Reject:'✗', Draft:'✎', Done:'★' };
+        const colors = { Approved:'success', Reject:'error', Draft:'warning', Done:'info' };
+        showToast(
+            colors[status]||'info',
+            `${icons[status]||''} ${status}`,
+            `${payrollIds.length} record(s) updated`
+        );
+    } catch (err) {
+        showToast('error', 'Network Error', 'Could not reach the server');
+        console.error(err);
+    }
+}
+
+function _refresh() {
+    const d = document.getElementById('filterDept').value;
+    const s = document.getElementById('filterStatus').value;
+    filteredData = allData.filter(e => (!d||e.department===d) && (!s||e.payroll_status===s));
+    renderTable();
+}
+
+// ── Open detail modal ─────────────────────────────────
+async function openDetail(payrollId) {
+    const modal  = document.getElementById('detailModal');
+    const body   = document.getElementById('modalBody');
+    const footer = document.getElementById('modalFooter');
+
+    body.innerHTML = `<div class="table-loading"><div class="loader-ring"></div>Loading details…</div>`;
+    footer.innerHTML = '';
+    modal.classList.add('open');
+
+    try {
+        const res = await fetch(`{% url "hrd-payroll-detail" 0 %}`.replace('/0/', `/${payrollId}/`));
+        const emp = await res.json();
+        if (!res.ok || emp.error) {
+            body.innerHTML = `<p style="color:#f08080;text-align:center;padding:24px;">${emp.error||'Failed to load'}</p>`;
+            return;
+        }
+        const initials = (emp.name||'').split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+        const statusCls = {
+            Approved:'badge-approved', Draft:'badge-draft',
+            Reject:'badge-reject', Pending:'badge-pending', Done:'badge-done'
+        }[emp.payroll_status]||'badge-pending';
+
+        body.innerHTML = `
+            <div class="modal-emp-block">
+                <div class="modal-emp-avatar">${initials}</div>
+                <div>
+                    <div class="modal-emp-name">${emp.name||'-'}</div>
+                    <div class="modal-emp-sub">${emp.position||''} · ${emp.department||''}</div>
+                </div>
+            </div>
+            <div class="modal-section-title">Attendance Summary</div>
+            <div class="detail-row"><span class="detail-label">Period</span>
+                <span class="detail-value">${MONTH_NAMES[emp.month]||emp.month} ${emp.year}</span></div>
+            <div class="detail-row"><span class="detail-label">Working Days (so far)</span>
+                <span class="detail-value">${emp.working_days||0} days</span></div>
+            <div class="detail-row"><span class="detail-label">Present</span>
+                <span class="detail-value" style="color:#4dcc8a;">${emp.present_days||0} days</span></div>
+            <div class="detail-row"><span class="detail-label">Late Attendance</span>
+                <span class="detail-value" style="color:${(emp.late_count||0)>0?'#f08080':'#4dcc8a'};">${emp.late_count||0}x</span></div>
+            <div class="detail-row"><span class="detail-label">Absent</span>
+                <span class="detail-value" style="color:${(emp.absent_days||0)>0?'#f08080':'#4dcc8a'};">${emp.absent_days||0} days</span></div>
+
+            <div class="modal-section-title">Payroll Information</div>
+            <div class="detail-row"><span class="detail-label">Base Salary</span>
+                <span class="detail-value salary-val">${emp.salary_formatted||'-'}</span></div>
+            <div class="detail-row"><span class="detail-label">NPWP</span>
+                <span class="detail-value" style="font-size:12px;color:rgba(255,255,255,.45);">${emp.npwp||'-'}</span></div>
+            <div class="detail-row"><span class="detail-label">Payroll Status</span>
+                <span class="badge-status ${statusCls}">${emp.payroll_status}</span></div>
+        `;
+
+        let btns = '';
+        if (['Draft','Pending'].includes(emp.payroll_status)) {
+            btns += `<button class="btn-modal approve" onclick="quickAction(${payrollId},'Approved');closeModal()"><i class="bi bi-check-lg"></i>Approve</button>`;
+            btns += `<button class="btn-modal draft"   onclick="quickAction(${payrollId},'Draft');closeModal()"><i class="bi bi-pencil"></i>Draft</button>`;
+            btns += `<button class="btn-modal reject"  onclick="quickAction(${payrollId},'Reject');closeModal()"><i class="bi bi-x-lg"></i>Reject</button>`;
+        }
+        if (emp.payroll_status === 'Approved') {
+            btns += `<button class="btn-modal done" onclick="quickAction(${payrollId},'Done');closeModal()"><i class="bi bi-trophy"></i>Done</button>`;
+            btns += `<button class="btn-modal reject" onclick="quickAction(${payrollId},'Reject');closeModal()"><i class="bi bi-x-lg"></i>Reject</button>`;
+        }
+        btns += `<button class="btn-modal close-btn" onclick="closeModal()">Close</button>`;
+        footer.innerHTML = btns;
+
+    } catch(err) {
+        body.innerHTML = `<p style="color:#f08080;text-align:center;padding:24px;">Network error. Please try again.</p>`;
+        console.error(err);
+    }
+}
+
+function closeModal() { document.getElementById('detailModal').classList.remove('open'); }
+document.getElementById('detailModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(type, title, msg) {
+    const icons = { success:'bi-check-circle-fill', error:'bi-x-circle-fill',
+                    info:'bi-info-circle-fill', warning:'bi-exclamation-triangle-fill' };
+    const t = document.createElement('div');
+    t.className = 'toast-item';
+    t.innerHTML = `<div class="toast-icon ${type}"><i class="bi ${icons[type]||icons.info}"></i></div>
+        <div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>
+        <button class="toast-close" onclick="this.closest('.toast-item').remove()"><i class="bi bi-x-lg"></i></button>`;
+    document.getElementById('toastContainer').appendChild(t);
+    requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 4500);
+}
+</script>
+{% endblock %}

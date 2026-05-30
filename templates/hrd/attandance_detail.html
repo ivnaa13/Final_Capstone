@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% block title %}Attendance Detail – HRD Portal{% endblock %}
+{% block nav_hrd_attendance %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Reuse CSS variables from base.html (pov-hrd) ── */
+  :root {
+    --c-card:      #132032;
+    --c-card-h:    #1a2e4a;
+    --c-input:     #0d1b30;
+    --c-border:    rgba(255,255,255,0.07);
+    --c-border-in: rgba(255,255,255,0.10);
+    --c-text:      #e8f0fb;
+    --c-muted:     #8aaac8;
+    --c-faint:     #4d6a8a;
+    --c-accent:    #3b82f6;
+    --c-accent-l:  #60a5fa;
+    --c-red:       #fca5a5;
+    --c-green:     #86efac;
+    --c-amber:     #fcd34d;
+  }
+
+  /* ── Back button ── */
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--c-border-in);
+    border-radius: 8px;
+    color: var(--c-muted);
+    font-size: .82rem; font-weight: 600;
+    text-decoration: none;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+  .back-btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+    color: var(--c-text);
+  }
+
+  /* ── Page header ── */
+  .det-page-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+  }
+  .det-page-title { font-size: 1.1rem; font-weight: 700; color: var(--c-text); }
+  .det-page-sub   { font-size: .76rem; color: var(--c-muted); margin-top: 2px; }
+
+  /* ── Two-column layout ── */
+  .det-layout {
+    display: grid;
+    grid-template-columns: 1fr 290px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .det-layout { grid-template-columns: 1fr; } }
+
+  /* ── Cards (main panel) ── */
+  .det-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .det-card-hdr {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--c-border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .det-card-hdr i { font-size: 15px; color: var(--c-accent-l); }
+  .det-card-hdr h3 { font-size: .88rem; font-weight: 700; color: var(--c-text); }
+  .det-card-body { padding: 18px 20px; }
+
+  /* ── Type + Duration top row ── */
+  .det-top-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 18px; margin-bottom: 18px;
+  }
+  .det-field-lbl {
+    font-size: .63rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .45px;
+    color: var(--c-muted); margin-bottom: 5px;
+  }
+  .det-field-val {
+    font-size: .92rem; font-weight: 700; color: var(--c-text);
+  }
+  .det-field-val-sm {
+    font-size: .83rem; font-weight: 600; color: var(--c-text);
+  }
+
+  /* ── Reason box ── */
+  .reason-box {
+    background: var(--c-input);
+    border: 1px solid var(--c-border-in);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: .82rem; color: var(--c-muted);
+    line-height: 1.65; font-style: italic;
+    margin-bottom: 18px;
+    border-left: 3px solid var(--c-accent);
+  }
+
+  /* ── Attachment area ── */
+  .attach-area {
+    background: var(--c-input);
+    border: 1px solid var(--c-border-in);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px;
+  }
+  .pdf-icon-box {
+    width: 72px; height: 90px;
+    background: var(--c-card);
+    border: 1.5px solid var(--c-border-in);
+    border-radius: 8px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .pdf-icon-box .pdf-emoji { font-size: 1.8rem; }
+  .pdf-icon-box .pdf-lbl  { font-size: .55rem; font-weight: 800; color: var(--c-red); letter-spacing: .5px; }
+  .attach-name { font-size: .78rem; font-weight: 600; color: var(--c-text); }
+  .attach-meta { font-size: .68rem; color: var(--c-faint); }
+  .btn-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px;
+    background: var(--c-accent); color: #fff;
+    border: none; border-radius: 8px;
+    font-size: .78rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background .2s; margin-top: 4px;
+    text-decoration: none;
+  }
+  .btn-dl:hover { background: var(--c-accent-l); }
+
+  /* ── Right sidebar panels ── */
+  .det-sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Employee card */
+  .emp-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+  }
+  .emp-status-badge {
+    position: absolute; top: 12px; right: 12px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: .65rem; font-weight: 700; letter-spacing: .2px;
+  }
+  .badge-pending  { background: rgba(217,119,6,.2);  color: var(--c-amber); border: 1px solid rgba(217,119,6,.3); }
+  .badge-approved { background: rgba(22,163,74,.2);  color: var(--c-green); border: 1px solid rgba(22,163,74,.3); }
+  .badge-rejected { background: rgba(220,38,38,.2);  color: var(--c-red);   border: 1px solid rgba(220,38,38,.3); }
+
+  .emp-av {
+    width: 50px; height: 50px; border-radius: 50%;
+    font-size: 1rem; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+    border: 2px solid rgba(59,130,246,.35);
+  }
+  .emp-name { font-size: .9rem; font-weight: 700; color: var(--c-text); }
+  .emp-pos  { font-size: .73rem; color: var(--c-muted); margin-bottom: 2px; }
+  .emp-dept { font-size: .7rem;  color: var(--c-faint); margin-bottom: 10px; }
+  .emp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emp-chip {
+    font-size: .65rem; color: var(--c-muted);
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--c-border-in);
+    padding: 2px 8px; border-radius: 4px;
+  }
+
+  /* HRD Notes */
+  .hrd-notes-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .hrd-notes-title { font-size: .75rem; font-weight: 700; color: var(--c-text); margin-bottom: 8px; }
+  .hrd-notes-card textarea {
+    width: 100%;
+    background: var(--c-input);
+    border: 1px solid var(--c-border-in);
+    border-radius: 8px;
+    color: var(--c-text); font-family: inherit;
+    font-size: .78rem; line-height: 1.55;
+    padding: 9px 12px; resize: none; outline: none;
+    min-height: 82px;
+    transition: border-color .2s;
+  }
+  .hrd-notes-card textarea::placeholder { color: var(--c-faint); }
+  .hrd-notes-card textarea:focus { border-color: var(--c-accent); }
+  .btn-save-notes {
+    margin-top: 8px; width: 100%;
+    padding: 8px; border-radius: 8px;
+    background: var(--c-accent); color: #fff;
+    border: none; font-size: .78rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background .2s;
+  }
+  .btn-save-notes:hover { background: var(--c-accent-l); }
+
+  /* Info grid */
+  .info-grid-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  .info-lbl {
+    font-size: .6rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px;
+    color: var(--c-faint); margin-bottom: 3px;
+  }
+  .info-val {
+    font-size: .78rem; font-weight: 600; color: var(--c-text);
+  }
+  .info-val.missing { color: var(--c-faint); font-weight: 400; font-style: italic; }
+
+  /* Status online dot */
+  .status-online { display: inline-flex; align-items: center; gap: 5px; }
+  .status-online::before {
+    content: ''; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--c-green);
+    flex-shrink: 0;
+  }
+
+  /* Clock in/out late tag inline */
+  .late-inline {
+    font-size: .63rem; color: var(--c-amber);
+    background: rgba(217,119,6,.15);
+    padding: 1px 6px; border-radius: 4px;
+    margin-left: 5px; vertical-align: middle;
+  }
+
+  /* Approve / Reject action buttons */
+  .action-row {
+    display: flex; gap: 10px; margin-top: 4px;
+  }
+  .btn-approve {
+    flex: 1; padding: 9px; border-radius: 8px;
+    background: rgba(22,163,74,.15); color: var(--c-green);
+    border: 1px solid rgba(22,163,74,.3);
+    font-size: .78rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: background .2s, border-color .2s;
+  }
+  .btn-approve:hover { background: rgba(22,163,74,.28); border-color: rgba(22,163,74,.5); }
+  .btn-reject {
+    flex: 1; padding: 9px; border-radius: 8px;
+    background: rgba(220,38,38,.12); color: var(--c-red);
+    border: 1px solid rgba(220,38,38,.25);
+    font-size: .78rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: background .2s, border-color .2s;
+  }
+  .btn-reject:hover { background: rgba(220,38,38,.25); border-color: rgba(220,38,38,.45); }
+
+  /* Toast notification */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--c-card-h, #1a2e4a);
+    border: 1px solid var(--c-border-in);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: .8rem; color: var(--c-text);
+    box-shadow: 0 8px 28px rgba(0,0,0,.4);
+    z-index: 9999;
+    display: flex; align-items: center; gap: 10px;
+    transform: translateY(20px); opacity: 0;
+    transition: transform .3s, opacity .3s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; pointer-events: all; }
+  .toast i { font-size: 1rem; }
+</style>
+{% endblock %}
+
+
+{% block hrd_content %}
+
+<!-- ── Page Header ── -->
+<div class="det-page-hdr">
+  <div>
+    <div class="det-page-title">Attendance Detail</div>
+    <div class="det-page-sub">Record #{{ record.id }} — {{ record.date|date:"d M Y" }}</div>
+  </div>
+  <a class="back-btn" href="{% url 'hrd-attendance' %}">
+    <i class="bi bi-arrow-left"></i> Back to Attendance
+  </a>
+</div>
+
+<!-- ── Detail Layout ── -->
+<div class="det-layout">
+
+  <!-- ──────────── LEFT: Main content ──────────── -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+
+    <!-- Application type & duration -->
+    <div class="det-card">
+      <div class="det-card-hdr">
+        <i class="bi bi-file-earmark-text"></i>
+        <h3>Attendance Record</h3>
+      </div>
+      <div class="det-card-body">
+        <div class="det-top-row">
+          <div>
+            <div class="det-field-lbl">Application Type</div>
+            <div class="det-field-val" id="det-type">
+              {% if record.status == 'Late' %}Late Attendance{% else %}Regular Attendance{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Duration / Period</div>
+            <div class="det-field-val" id="det-duration">
+              {{ record.date|date:"d M Y" }}
+              ({{ record.clock_in }} – {{ record.clock_out|default:"—" }})
+            </div>
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="det-field-lbl" style="margin-bottom:8px">Reason / Notes</div>
+        <div class="reason-box" id="det-reason">
+          {% if record.status == 'Late' %}
+            "Arrived late at {{ record.clock_in }} — {{ record.delay_minutes }} minutes past schedule.
+            {% if record.notes %}{{ record.notes }}{% else %}No additional notes provided.{% endif %}"
+          {% else %}
+            "{% if record.notes %}{{ record.notes }}{% else %}Regular attendance check-in. All tasks completed as scheduled.{% endif %}"
+          {% endif %}
+        </div>
+
+        <!-- Attachment -->
+        <div class="det-field-lbl" style="margin-bottom:10px">Attachment</div>
+        <div class="attach-area">
+          {% if record.attachment %}
+            <div class="pdf-icon-box">
+              <div class="pdf-emoji">📄</div>
+              <div class="pdf-lbl">PDF</div>
+            </div>
+            <div class="attach-name" id="det-attach-name">{{ record.attachment.name|default:"Attendance_Document.pdf" }}</div>
+            <div class="attach-meta">Portable Document Format</div>
+            <a class="btn-dl" href="{{ record.attachment.url }}" download>
+              <i class="bi bi-download"></i> Download Attachment
+            </a>
+          {% else %}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;color:var(--c-faint)">
+              <i class="bi bi-paperclip" style="font-size:1.8rem;opacity:.4"></i>
+              <span style="font-size:.78rem">No attachment uploaded</span>
+              <!-- Fallback: generate TXT report -->
+              <button class="btn-dl" onclick="downloadReport()">
+                <i class="bi bi-download"></i> Download Report (TXT)
+              </button>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Location & clock detail -->
+    <div class="det-card">
+      <div class="det-card-hdr">
+        <i class="bi bi-geo-alt-fill"></i>
+        <h3>Location &amp; Clock Detail</h3>
+      </div>
+      <div class="det-card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div>
+            <div class="det-field-lbl">Clock In</div>
+            <div class="det-field-val-sm">
+              {{ record.clock_in|default:"—" }}
+              {% if record.delay_minutes > 0 %}<span class="late-inline">+{{ record.delay_minutes }}min</span>{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Clock Out</div>
+            <div class="det-field-val-sm">
+              {% if record.clock_out %}{{ record.clock_out }}{% else %}<span style="color:var(--c-red)">Belum clock out</span>{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Status</div>
+            <div class="det-field-val-sm">
+              {% if record.status == 'Late' %}
+                <span class="emp-chip" style="color:var(--c-amber);border-color:rgba(217,119,6,.3)">Late</span>
+              {% elif record.status == 'Overtime' %}
+                <span class="emp-chip" style="color:#93c5fd;border-color:rgba(59,130,246,.3)">Overtime</span>
+              {% else %}
+                <span class="emp-chip" style="color:var(--c-green);border-color:rgba(22,163,74,.3)">Present</span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Latitude</div>
+            <div class="det-field-val-sm">{{ record.latitude|default:"—" }}</div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Longitude</div>
+            <div class="det-field-val-sm">{{ record.longitude|default:"—" }}</div>
+          </div>
+          <div>
+            <div class="det-field-lbl">Location Valid</div>
+            <div class="det-field-val-sm">
+              {% if record.is_valid_location %}
+                <span style="color:var(--c-green)"><i class="bi bi-check-circle-fill"></i> Valid</span>
+              {% else %}
+                <span style="color:var(--c-red)"><i class="bi bi-x-circle-fill"></i> Invalid</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Selfie photo -->
+        {% if record.photo_url %}
+        <div style="margin-top:16px">
+          <div class="det-field-lbl" style="margin-bottom:8px">Selfie Photo</div>
+          <img src="{{ record.photo_url }}"
+               alt="Selfie {{ record.employee_name }}"
+               style="width:100%;max-width:320px;border-radius:10px;border:1px solid var(--c-border-in);cursor:pointer"
+               onclick="openLightbox('{{ record.photo_url }}','{{ record.employee_name }}','{{ record.date }}','{{ record.clock_in }}')">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- ──────────── RIGHT: Sidebar ──────────── -->
+  <div class="det-sidebar">
+
+    <!-- Employee card -->
+    <div class="emp-card">
+      <span class="emp-status-badge
+        {% if record.status == 'Late' %}badge-pending
+        {% else %}badge-approved{% endif %}">
+        {% if record.status == 'Late' %}PENDING{% else %}APPROVED{% endif %}
+      </span>
+
+      <div class="emp-av" id="det-emp-av"
+           style="background: {{ record.employee_code|default:'EMP001'|slice:'3:'|add:'1'|default:'#3b82f6' }}">
+        {# Initials via template filter or JS fallback #}
+        <span id="det-emp-initials">{{ record.employee_name|default:"??" |slice:":1"|upper }}{{ record.employee_name|default:""|wordcount }}</span>
+      </div>
+      <div class="emp-name" id="det-emp-name">{{ record.employee_name|default:"—" }}</div>
+      <div class="emp-pos"  id="det-emp-pos">{{ record.employee_position|default:record.employee_division }}</div>
+      <div class="emp-dept" id="det-emp-dept">{{ record.employee_division|default:"—" }}</div>
+      <div class="emp-chips">
+        <span class="emp-chip">{{ record.employee_code|default:"—" }}</span>
+        <span class="emp-chip">{{ record.employee_email|default:"—" }}</span>
+      </div>
+    </div>
+
+    <!-- HRD Notes -->
+    <div class="hrd-notes-card">
+      <div class="hrd-notes-title"><i class="bi bi-pencil-square" style="margin-right:5px;color:var(--c-accent-l)"></i>HRD Review Notes</div>
+      <form method="post" action="" id="notes-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_notes">
+        <input type="hidden" name="record_id" value="{{ record.id }}">
+        <textarea name="hrd_notes" placeholder="Enter review, comments, or feedback…">{{ record.hrd_notes|default:'' }}</textarea>
+        <button type="submit" class="btn-save-notes">
+          <i class="bi bi-floppy"></i> Save Notes
+        </button>
+      </form>
+
+      <!-- Approve / Reject -->
+      <div class="action-row" style="margin-top:12px">
+        <form method="post" style="flex:1;margin:0">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="approve">
+          <input type="hidden" name="record_id" value="{{ record.id }}">
+          <button type="submit" class="btn-approve" style="width:100%">
+            <i class="bi bi-check-lg"></i> Approve
+          </button>
+        </form>
+        <form method="post" style="flex:1;margin:0">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reject">
+          <input type="hidden" name="record_id" value="{{ record.id }}">
+          <button type="submit" class="btn-reject" style="width:100%">
+            <i class="bi bi-x-lg"></i> Reject
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="info-grid-card">
+      <div class="info-grid">
+        <div>
+          <div class="info-lbl">NPWP (Tax ID)</div>
+          <div class="info-val">{{ record.employee_npwp|default:"—" }}</div>
+        </div>
+        <div>
+          <div class="info-lbl">Phone</div>
+          <div class="info-val {% if not record.employee_phone %}missing{% endif %}">
+            {{ record.employee_phone|default:"—" }}
+          </div>
+        </div>
+        <div>
+          <div class="info-lbl">Date</div>
+          <div class="info-val">{{ record.date|date:"d M Y"|default:"—" }}</div>
+        </div>
+        <div>
+          <div class="info-lbl">Record ID</div>
+          <div class="info-val">#{{ record.id }}</div>
+        </div>
+        <div>
+          <div class="info-lbl">Employment Status</div>
+          <div class="info-val"><span class="status-online">Active</span></div>
+        </div>
+        <div>
+          <div class="info-lbl">Department</div>
+          <div class="info-val">{{ record.employee_division|default:"—" }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /det-layout -->
+
+<!-- ── Photo Lightbox ── -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="closeLightbox(null)"><i class="bi bi-x"></i></button>
+    <img id="lb-img" src="" alt="Foto Absensi">
+    <div class="lightbox-meta" id="lb-meta"></div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast">
+  <i class="bi bi-check-circle-fill" style="color:var(--c-green)"></i>
+  <span id="toast-msg">Notes saved successfully.</span>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+/* ────────────────────────────────
+   Avatar initials + color helper
+   (same logic as attendance.html)
+──────────────────────────────── */
+const AV_COLORS = ['#1e3a5f','#2980b9','#16a085','#8e44ad','#c0392b','#d35400','#1a6b5a','#4a1c7c'];
+
+function initials(name) {
+  return (name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+function avColor(code) {
+  const n = parseInt((code || '0').replace(/\D/g, '')) || 0;
+  return AV_COLORS[n % AV_COLORS.length];
+}
+
+/* ────────────────────────────────
+   Fix avatar on load using Django
+   template data passed as JS vars
+──────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const empName = "{{ record.employee_name|escapejs }}";
+  const empCode = "{{ record.employee_code|escapejs }}";
+
+  const avEl = document.getElementById('det-emp-av');
+  const initEl = document.getElementById('det-emp-initials');
+  if (avEl) avEl.style.background = avColor(empCode);
+  if (initEl) initEl.textContent = initials(empName);
+});
+
+/* ────────────────────────────────
+   Photo lightbox
+   (reuse same pattern as attendance.html)
+──────────────────────────────── */
+function openLightbox(url, name, date, clockIn) {
+  document.getElementById('lb-img').src = url;
+  document.getElementById('lb-meta').innerHTML =
+    `<strong>${name}</strong><br>
+     Tanggal: ${date} &nbsp;|&nbsp; Clock In: ${clockIn}<br>
+     <span style="color:var(--c-faint,#4d6a8a);font-size:.68rem">Klik di luar foto untuk menutup</span>`;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(event) {
+  if (!event || event.target.id === 'lightbox') {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lb-img').src = '';
+  }
+}
+
+/* ────────────────────────────────
+   Fallback TXT report download
+   (for when no attachment uploaded)
+──────────────────────────────── */
+function downloadReport() {
+  const content = [
+    'ATTENDANCE DETAIL REPORT',
+    '='.repeat(40),
+    'Record ID  : {{ record.id }}',
+    'Employee   : {{ record.employee_name|escapejs }}',
+    'Division   : {{ record.employee_division|escapejs }}',
+    'NPWP       : {{ record.employee_npwp|escapejs|default:"—" }}',
+    'Date       : {{ record.date }}',
+    'Clock In   : {{ record.clock_in }}',
+    'Clock Out  : {{ record.clock_out|default:"Not yet" }}',
+    'Status     : {{ record.status }}',
+    'Latitude   : {{ record.latitude|default:"—" }}',
+    'Longitude  : {{ record.longitude|default:"—" }}',
+    'Loc Valid  : {% if record.is_valid_location %}Yes{% else %}No{% endif %}',
+    '',
+    'Generated by HRD Portal — ' + new Date().toLocaleString('id-ID'),
+  ].join('\n');
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Attendance_{{ record.id }}_{{ record.employee_name|escapejs|cut:" " }}.txt`;
+  a.click();
+}
+
+/* ────────────────────────────────
+   Toast for notes form (AJAX submit)
+──────────────────────────────── */
+function showToast(msg, isError = false) {
+  const el  = document.getElementById('toast');
+  const ico = el.querySelector('i');
+  document.getElementById('toast-msg').textContent = msg;
+  ico.className = isError
+    ? 'bi bi-x-circle-fill'
+    : 'bi bi-check-circle-fill';
+  ico.style.color = isError ? 'var(--c-red)' : 'var(--c-green)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+document.getElementById('notes-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    const res = await fetch(window.location.pathname, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast('Notes saved successfully.');
+  } catch (err) {
+    showToast('Failed to save notes.', true);
+  }
+});
+</script>
+
+<!-- Lightbox CSS — reused from attendance.html pattern -->
+<style>
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox-inner {
+    background: var(--c-card, #132032);
+    border: 1px solid var(--c-border, rgba(255,255,255,.07));
+    border-radius: 14px; padding: 16px;
+    max-width: 480px; width: 90%; position: relative;
+  }
+  .lightbox-inner img {
+    width: 100%; border-radius: 8px; display: block;
+    max-height: 60vh; object-fit: contain;
+  }
+  .lightbox-close {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,.5); border: none; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-meta {
+    margin-top: 10px; font-size: .78rem;
+    color: var(--c-muted, #8aaac8); line-height: 1.6;
+  }
+  .lightbox-meta strong { color: var(--c-text, #e8f0fb); }
+</style>
+{% endblock %}

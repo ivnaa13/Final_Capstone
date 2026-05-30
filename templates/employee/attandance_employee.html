@@ -1,0 +1,850 @@
+{% extends 'base.html' %}
+{% block title %}Attendance — Check In/Out{% endblock %}
+{% block nav_emp_attendance %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+
+/* ═══════════════════════════════════════════════
+   ATTENDANCE — Employee POV
+   ═══════════════════════════════════════════════ */
+
+/* ── PAGE HEADER ── */
+.att-hdr {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.att-hdr h1 {
+    font-size: 1.3rem; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+}
+.att-hdr p {
+    font-size: .78rem; color: var(--muted);
+    display: flex; align-items: center; gap: 5px;
+}
+
+.v-badge {
+    background: var(--navy);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--text);
+    padding: 8px 18px; border-radius: 20px;
+    font-size: .73rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+    box-shadow: 0 2px 12px rgba(59,130,246,0.15);
+}
+.v-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #f59e0b; flex-shrink: 0;
+    transition: background .3s;
+}
+.v-dot.ok   { background: #22c55e; animation: vblink 1.5s ease-in-out infinite; }
+.v-dot.scan { background: #3b82f6; animation: vblink .8s ease-in-out infinite; }
+@keyframes vblink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+/* ── LAYOUT ── */
+.att-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 18px; align-items: start;
+}
+@media(max-width:1050px){ .att-layout{ grid-template-columns: 1fr; } }
+
+/* ══ CAMERA CARD ══ */
+.cam-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(59,130,246,0.18);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.cam-card-hdr {
+    padding: 14px 20px;
+    background: var(--navy);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.cam-card-hdr h3 {
+    font-size: .92rem; font-weight: 700;
+    color: var(--text);
+    display: flex; align-items: center; gap: 9px;
+}
+.cam-card-hdr h3 svg { color: #60a5fa; stroke: #60a5fa; }
+.cam-state-txt { font-size: .72rem; color: var(--muted); }
+
+/* viewport */
+.cam-vp {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    background: #060f1e;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+}
+#cam-video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+}
+#cam-canvas { display: none; }
+
+/* corner brackets overlay */
+.cam-vp::before, .cam-vp::after {
+    content: '';
+    position: absolute;
+    width: 40px; height: 40px;
+    border-color: rgba(59,130,246,0.5);
+    border-style: solid;
+    z-index: 5; pointer-events: none;
+}
+.cam-vp::before { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+.cam-vp::after  { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 3px 0 0; }
+
+/* scan line */
+.scan-line {
+    position: absolute; inset: 0;
+    pointer-events: none; overflow: hidden;
+    opacity: 0; transition: opacity .4s;
+    z-index: 4;
+}
+.scan-line.on { opacity: 1; }
+.scan-line::after {
+    content: '';
+    position: absolute; left:6%; right:6%; height:2px;
+    background: linear-gradient(90deg,transparent,rgba(34,197,94,.9),transparent);
+    box-shadow: 0 0 12px rgba(34,197,94,.6);
+    animation: scan 2.5s ease-in-out infinite;
+}
+@keyframes scan { 0%{top:6%} 50%{top:90%} 100%{top:6%} }
+
+/* face box */
+.face-box {
+    position: absolute;
+    border: 2px solid #22c55e;
+    border-radius: 6px;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 0 24px rgba(34,197,94,.35);
+    z-index: 6;
+}
+.face-box.show { display: block; }
+.face-lbl {
+    position: absolute; top:-24px; left:50%;
+    transform: translateX(-50%);
+    background: #16a34a; color: #fff;
+    font-size: .6rem; font-weight: 700;
+    padding: 2px 9px; border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(22,163,74,.4);
+}
+
+/* placeholder */
+.cam-ph {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; padding: 40px 20px;
+    color: rgba(255,255,255,.4); text-align: center;
+    z-index: 3; position: relative;
+}
+.cam-ph-icon { font-size: 3.2rem; filter: drop-shadow(0 0 12px rgba(59,130,246,.3)); }
+.cam-ph p { font-size: .83rem; line-height: 1.7; }
+.cam-ph strong { color: rgba(255,255,255,.75); }
+
+.btn-start-inner {
+    padding: 9px 20px; border-radius: 9px;
+    background: rgba(59,130,246,0.2);
+    border: 1px solid rgba(59,130,246,0.45);
+    color: #93c5fd; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .79rem; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; gap: 7px;
+}
+.btn-start-inner:hover {
+    background: rgba(59,130,246,0.35);
+    border-color: rgba(59,130,246,0.7);
+    color: #bfdbfe;
+}
+
+/* status bar */
+.cam-status-bar {
+    position: absolute; bottom:0; left:0; right:0;
+    background: rgba(6,15,30,.85);
+    backdrop-filter: blur(4px);
+    padding: 7px 16px;
+    display: flex; align-items: center; gap: 14px;
+    z-index: 7;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+.csb-item { display: flex; align-items: center; gap: 6px; font-size: .67rem; color: rgba(255,255,255,.5); }
+.csb-dot  { width:6px; height:6px; border-radius:50%; background:#2d3e55; flex-shrink:0; }
+.csb-dot.on { background:#22c55e; animation:vblink 2s infinite; }
+.csb-sep  { width:1px; height:12px; background:rgba(255,255,255,.12); }
+
+/* controls */
+.cam-ctrls {
+    padding: 14px 20px;
+    background: var(--navy);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+}
+.btn-cam {
+    padding: 8px 16px; border-radius: 9px;
+    background: #1e3a5f;
+    border: 1px solid rgba(59,130,246,0.3);
+    color: #93c5fd; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .78rem; font-weight: 600;
+    cursor: pointer; transition: all .18s;
+    display: flex; align-items: center; gap: 6px;
+}
+.btn-cam:hover {
+    background: #254b7a;
+    border-color: rgba(59,130,246,0.6);
+    color: #bfdbfe;
+}
+.btn-cam.stop {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.15);
+    color: var(--muted);
+}
+.btn-cam.stop:hover {
+    background: rgba(220,38,38,0.15);
+    border-color: rgba(220,38,38,0.4);
+    color: #fca5a5;
+}
+
+/* Check-In / Check-Out big buttons */
+.btn-ci, .btn-co {
+    padding: 11px 28px; border-radius: 50px;
+    border: none; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .92rem; font-weight: 700;
+    cursor: pointer; letter-spacing: .2px;
+    display: flex; align-items: center; gap: 8px;
+    transition: all .22s;
+}
+.btn-ci {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(22,163,74,.35);
+}
+.btn-ci:hover:not(:disabled) {
+    background: linear-gradient(135deg, #15803d, #14532d);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(22,163,74,.45);
+}
+.btn-co {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(220,38,38,.32);
+}
+.btn-co:hover:not(:disabled) {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(220,38,38,.42);
+}
+.btn-ci:disabled, .btn-co:disabled {
+    background: #1e3a5f !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    color: #4d6a8a !important;
+    cursor: not-allowed; opacity: .6;
+    transform: none !important; box-shadow: none !important;
+}
+
+/* location strip */
+.loc-strip {
+    padding: 10px 20px;
+    background: var(--navy);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; gap: 18px; flex-wrap: wrap;
+    font-size: .75rem; color: var(--muted);
+}
+.loc-strip strong { color: #93c5fd; font-weight: 600; }
+
+/* ══ RIGHT PANEL ══ */
+.info-panel { display: flex; flex-direction: column; gap: 14px; }
+
+/* info card */
+.info-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(59,130,246,0.15);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.ic-hdr {
+    background: var(--navy);
+    padding: 12px 16px;
+    color: #93c5fd;
+    font-size: .82rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid rgba(59,130,246,0.2);
+    letter-spacing: .2px;
+}
+
+/* GPS coordinates */
+.coords-blk { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.blk-title {
+    font-size: .6rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--faint); margin-bottom: 9px;
+    display: flex; align-items: center; gap: 5px;
+}
+.coord-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 5px; font-size: .78rem;
+}
+.coord-row:last-child { margin-bottom: 0; }
+.cr-k { color: var(--muted); }
+.cr-v { font-family: 'Courier New', monospace; font-weight: 700; color: var(--text); font-size: .74rem; }
+.acc-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 9px; border-radius: 12px;
+    font-size: .63rem; font-weight: 700;
+}
+.acc-h { background: rgba(22,163,74,0.2);  color: #86efac; border: 1px solid rgba(22,163,74,0.3); }
+.acc-m { background: rgba(217,119,6,0.2);  color: #fcd34d; border: 1px solid rgba(217,119,6,0.3); }
+.acc-l { background: rgba(220,38,38,0.2);  color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
+
+/* mini 2-col grid */
+.mini-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 9px; padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.mini-card {
+    background: var(--navy);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 9px; padding: 11px 12px;
+    transition: border-color .2s;
+}
+.mini-card:hover { border-color: rgba(59,130,246,0.3); }
+.mc-ttl {
+    font-size: .58rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .7px; color: var(--faint); margin-bottom: 6px;
+}
+.mc-main { font-size: .89rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+.mc-sub  { font-size: .64rem; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+/* today's log */
+.log-blk { padding: 12px 15px; }
+.log-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: .79rem;
+}
+.log-row:last-child { border-bottom: none; }
+.lr-k { color: var(--muted); font-weight: 500; }
+.lr-v { font-weight: 700; color: var(--text); }
+.lr-v.g { color: #86efac; }
+.lr-v.r { color: #fca5a5; }
+
+/* verification checklist */
+.verify-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(59,130,246,0.15);
+    border-radius: 14px; padding: 14px 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.verify-ttl {
+    font-size: .6rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--faint); margin-bottom: 10px;
+}
+.vi-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0; font-size: .8rem;
+}
+.vi-row + .vi-row { border-top: 1px solid rgba(255,255,255,0.05); }
+.vi-ico {
+    width:28px; height:28px; border-radius:8px;
+    display:grid; place-items:center;
+    font-size:.78rem; flex-shrink:0;
+    transition: background .2s;
+}
+.vi-ico.pend { background: var(--navy); border: 1px solid rgba(255,255,255,0.08); }
+.vi-ico.ok   { background: rgba(22,163,74,0.2); border: 1px solid rgba(22,163,74,0.3); }
+.vi-ico.fail { background: rgba(220,38,38,0.2); border: 1px solid rgba(220,38,38,0.3); }
+.vi-lbl { flex:1; color:var(--muted); font-weight:500; }
+.vi-st { font-size:.68rem; font-weight:700; }
+.vi-st.ok   { color: #86efac; }
+.vi-st.fail { color: #fca5a5; }
+.vi-st.pend { color: var(--faint); }
+
+/* badges */
+.badge-green  { background: rgba(22,163,74,0.2);    color: #86efac;  border: 1px solid rgba(22,163,74,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
+.badge-yellow { background: rgba(217,119,6,0.2);    color: #fcd34d;  border: 1px solid rgba(217,119,6,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
+.badge-red    { background: rgba(220,38,38,0.2);    color: #fca5a5;  border: 1px solid rgba(220,38,38,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
+.badge-blue   { background: rgba(59,130,246,0.2);   color: #93c5fd;  border: 1px solid rgba(59,130,246,0.3);  padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
+.badge-gray   { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid rgba(255,255,255,0.12); padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
+
+/* toast */
+.att-toast {
+    position: fixed; bottom:24px; right:24px;
+    background: var(--navy);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--text);
+    padding:11px 20px; border-radius:10px;
+    font-size:.82rem; font-weight:500;
+    box-shadow: 0 8px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(59,130,246,.1);
+    transform:translateY(60px); opacity:0;
+    transition:all .3s cubic-bezier(.34,1.56,.64,1);
+    z-index:9999; max-width:320px;
+}
+.att-toast.show { transform:translateY(0); opacity:1; }
+</style>
+{% endblock %}
+
+
+{% block emp_content %}
+
+<script>
+    const checkedIn  = {% if today_attendance and today_attendance.check_in %}true{% else %}false{% endif %};
+    const checkedOut = {% if today_attendance and today_attendance.check_out %}true{% else %}false{% endif %};
+</script>
+
+<div id="att-root">
+
+    <div class="att-hdr">
+        <div>
+            <h1>Attendance</h1>
+            <p>
+                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04
+                             A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622
+                             0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Face &amp; Location Verification System
+            </p>
+        </div>
+        <div class="v-badge">
+            <div class="v-dot" id="vdot"></div>
+            <span id="vtxt">Face and Location Detection Verification</span>
+        </div>
+    </div>
+
+    <div class="att-layout">
+
+        <div class="cam-card">
+            <div class="cam-card-hdr">
+                <h3>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 10l4.553-2.069A1 1 0 0121 8.868V15.131a1 1 0 01-1.447.901L15 14
+                                 M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                    </svg>
+                    Live Camera Feed
+                </h3>
+                <span class="cam-state-txt" id="cam-state-txt">● Camera Off</span>
+            </div>
+
+            <div class="cam-vp" id="cam-vp">
+                <video id="cam-video" autoplay muted playsinline></video>
+                <canvas id="cam-canvas"></canvas>
+                <div class="scan-line" id="scan-line"></div>
+                <div class="face-box" id="face-box">
+                    <span class="face-lbl">Face Detected ✓</span>
+                </div>
+
+                <div class="cam-ph" id="cam-ph">
+                    <div class="cam-ph-icon">📷</div>
+                    <p>Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
+                    <button class="btn-start-inner" onclick="startCam()">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+                        </svg>
+                        Start Camera
+                    </button>
+                </div>
+
+                <div class="cam-status-bar">
+                    <div class="csb-item"><div class="csb-dot" id="sd-cam"></div><span id="st-cam">Camera off</span></div>
+                    <div class="csb-sep"></div>
+                    <div class="csb-item"><div class="csb-dot" id="sd-face"></div><span id="st-face">No face</span></div>
+                    <div class="csb-sep"></div>
+                    <div class="csb-item"><div class="csb-dot" id="sd-loc"></div><span id="st-loc">Location pending</span></div>
+                </div>
+            </div>
+
+            <div class="cam-ctrls">
+                <div style="display:flex;gap:8px;">
+                    <button class="btn-cam" id="btn-start" onclick="startCam()">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+                        </svg>
+                        Start Camera
+                    </button>
+                    <button class="btn-cam stop" id="btn-stop" onclick="stopCam()" style="display:none;">
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="5" y="5" width="14" height="14" rx="2"/>
+                        </svg>
+                        Stop
+                    </button>
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <form id="ci-form" method="post" action="{% url 'employee-checkin' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action"    value="checkin">
+                        <input type="hidden" name="latitude"  id="ci-lat">
+                        <input type="hidden" name="longitude" id="ci-lng">
+                        <input type="hidden" name="address"   id="ci-addr">
+                        <input type="hidden" name="photo"     id="ci-photo">
+                        <button type="button" class="btn-ci" id="btn-ci" onclick="doCheckIn()" disabled>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Check-In
+                        </button>
+                    </form>
+                    <form id="co-form" method="post" action="{% url 'employee-checkin' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action"    value="checkout">
+                        <input type="hidden" name="latitude"  id="co-lat">
+                        <input type="hidden" name="longitude" id="co-lng">
+                        <input type="hidden" name="address"   id="co-addr">
+                        <input type="hidden" name="photo"     id="co-photo">
+                        <button type="button" class="btn-co" id="btn-co" onclick="doCheckOut()" disabled>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Check-Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="loc-strip">
+                <span>📍 Lat: <strong id="s-lat">Detecting…</strong></span>
+                <span>🧭 Lng: <strong id="s-lng">Detecting…</strong></span>
+                <span id="s-dist-wrap" style="display:none;">🏢 Distance: <strong id="s-dist">—</strong></span>
+            </div>
+        </div>
+
+        <div class="info-panel">
+
+            <div class="info-card">
+                <div class="ic-hdr">📍 Location Information Details</div>
+
+                <div class="coords-blk">
+                    <div class="blk-title">GPS Coordinates</div>
+                    <div class="coord-row"><span class="cr-k">• Latitude</span><span class="cr-v" id="c-lat">Detecting…</span></div>
+                    <div class="coord-row"><span class="cr-k">• Longitude</span><span class="cr-v" id="c-lng">Detecting…</span></div>
+                    <div class="coord-row"><span class="cr-k">• Accuracy</span><span id="c-acc"><span class="acc-pill acc-l">Pending</span></span></div>
+                </div>
+
+                <div class="mini-grid">
+                    <div class="mini-card">
+                        <div class="mc-ttl">Your Location</div>
+                        <div class="mc-main" id="loc-city">Detecting…</div>
+                        <div class="mc-sub"  id="loc-addr">Please allow location access</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mc-ttl">Current Time</div>
+                        <div class="mc-main" id="att-time" style="font-variant-numeric:tabular-nums;">00:00</div>
+                        <div class="mc-sub"  id="att-day">—</div>
+                    </div>
+                </div>
+
+                <div class="log-blk">
+                    <div class="blk-title">Today's Record</div>
+                    <div class="log-row">
+                        <span class="lr-k">Date</span>
+                        <span class="lr-v">{{ today|date:"d-m-Y" }}</span>
+                    </div>
+                    <div class="log-row">
+                        <span class="lr-k">Check-In</span>
+                        <span class="lr-v g">
+                            {% if today_attendance and today_attendance.check_in %}
+                                {{ today_attendance.check_in|time:"H:i" }}
+                            {% else %}Not yet{% endif %}
+                        </span>
+                    </div>
+                    <div class="log-row">
+                        <span class="lr-k">Check-Out</span>
+                        <span class="lr-v r">
+                            {% if today_attendance and today_attendance.check_out %}
+                                {{ today_attendance.check_out|time:"H:i" }}
+                            {% else %}Not yet{% endif %}
+                        </span>
+                    </div>
+                    <div class="log-row">
+                        <span class="lr-k">Status</span>
+                        <span class="lr-v">
+                            {% if today_attendance %}
+                                {% if today_attendance.status == 'present' %}<span class="badge-green">Present</span>
+                                {% elif today_attendance.status == 'late' %}<span class="badge-yellow">Late</span>
+                                {% else %}<span class="badge-gray">{{ today_attendance.get_status_display }}</span>
+                                {% endif %}
+                            {% else %}<span class="badge-gray">Pending</span>{% endif %}
+                        </span>
+                    </div>
+                    <div class="log-row">
+                        <span class="lr-k">Duration</span>
+                        <span class="lr-v">{{ today_attendance.duration|default:"—" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="verify-card">
+                <div class="verify-ttl">Verification Status</div>
+                <div class="vi-row">
+                    <div class="vi-ico pend" id="vi-cam-ico">📷</div>
+                    <span class="vi-lbl">Camera Active</span>
+                    <span class="vi-st pend" id="vi-cam-st">Pending</span>
+                </div>
+                <div class="vi-row">
+                    <div class="vi-ico pend" id="vi-face-ico">👤</div>
+                    <span class="vi-lbl">Face Detected</span>
+                    <span class="vi-st pend" id="vi-face-st">Pending</span>
+                </div>
+                <div class="vi-row">
+                    <div class="vi-ico pend" id="vi-loc-ico">📍</div>
+                    <span class="vi-lbl">Location Acquired</span>
+                    <span class="vi-st pend" id="vi-loc-st">Pending</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="att-toast" id="att-toast"></div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+
+let stream       = null;
+let faceDetected = false;
+let locOK        = false;
+let faceTimer    = null;
+let userLat = null, userLng = null, userAddr = '';
+
+let _tt = null;
+function toast(msg, ms = 4000) {
+    const el = document.getElementById('att-toast');
+    el.textContent = msg; el.classList.add('show');
+    if (_tt) clearTimeout(_tt);
+    _tt = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function tick() {
+    const n = new Date();
+    const t = document.getElementById('att-time');
+    const d = document.getElementById('att-day');
+    if(t) t.textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    if(d) d.textContent = DAYS[n.getDay()] + ', ' + MONS[n.getMonth()] + ' ' + n.getDate() + ', ' + n.getFullYear();
+}
+setInterval(tick, 1000); tick();
+
+function startGeo() {
+    if (!navigator.geolocation) { setLocFail('Not supported'); return; }
+    navigator.geolocation.getCurrentPosition(onLocOK, onLocFail,
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+}
+
+function onLocOK(pos) {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    const acc = Math.round(pos.coords.accuracy);
+    locOK = true;
+
+    document.getElementById('c-lat').textContent = userLat.toFixed(6);
+    document.getElementById('c-lng').textContent = userLng.toFixed(6);
+    document.getElementById('s-lat').textContent = userLat.toFixed(6);
+    document.getElementById('s-lng').textContent = userLng.toFixed(6);
+
+    const aEl = document.getElementById('c-acc');
+    if (acc < 30)    aEl.innerHTML = `<span class="acc-pill acc-h">± ${acc}m · High</span>`;
+    else if(acc<100) aEl.innerHTML = `<span class="acc-pill acc-m">± ${acc}m · Medium</span>`;
+    else             aEl.innerHTML = `<span class="acc-pill acc-l">± ${acc}m · Low</span>`;
+
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json`)
+        .then(r=>r.json()).then(data=>{
+            const a = data.address || {};
+            const city = a.city || a.town || a.county || a.state || 'Location';
+            const full = [a.road, a.suburb, a.city, a.state, (a.country_code||'').toUpperCase()].filter(Boolean).join(', ');
+            userAddr = full;
+            document.getElementById('loc-city').textContent = city;
+            document.getElementById('loc-addr').textContent = full || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+        }).catch(()=>{
+            document.getElementById('loc-city').textContent = 'Location detected';
+            document.getElementById('loc-addr').textContent = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
+            userAddr = `${userLat},${userLng}`;
+        });
+
+    setLocDot(true);
+    evaluateReady();
+}
+function onLocFail() {
+    document.getElementById('c-lat').textContent = 'Access denied';
+    document.getElementById('s-lat').textContent = 'Denied';
+    document.getElementById('loc-city').textContent = 'Unavailable';
+    document.getElementById('loc-addr').textContent = 'Allow location in browser settings';
+    setLocFail('Denied');
+}
+function setLocDot(ok) {
+    const d=document.getElementById('sd-loc'), t=document.getElementById('st-loc');
+    const i=document.getElementById('vi-loc-ico'), s=document.getElementById('vi-loc-st');
+    if(ok){
+        d.classList.add('on'); t.textContent='Location acquired'; t.style.color='#86efac';
+        i.className='vi-ico ok'; i.textContent='✅';
+        s.className='vi-st ok'; s.textContent='Verified';
+    }
+}
+function setLocFail(msg) {
+    const t=document.getElementById('st-loc'); t.textContent=msg; t.style.color='#fca5a5';
+    const i=document.getElementById('vi-loc-ico'), s=document.getElementById('vi-loc-st');
+    i.className='vi-ico fail'; i.textContent='❌';
+    s.className='vi-st fail'; s.textContent='Failed';
+}
+
+async function startCam() {
+    if (stream) return;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { width:{ideal:1280}, height:{ideal:720}, facingMode:'user' },
+            audio: false
+        });
+        const video = document.getElementById('cam-video');
+        video.srcObject = stream;
+        await new Promise(res => { video.onloadedmetadata = () => { video.play(); res(); }; });
+        video.style.display = 'block';
+        document.getElementById('cam-ph').style.display = 'none';
+        document.getElementById('scan-line').classList.add('on');
+        document.getElementById('btn-start').style.display = 'none';
+        document.getElementById('btn-stop').style.display  = 'flex';
+
+        setStatus('sd-cam','st-cam','Camera active','#86efac');
+        document.getElementById('cam-state-txt').textContent = '● Camera Active';
+        document.getElementById('cam-state-txt').style.color = '#86efac';
+        setVerify('vi-cam','📷','✅','ok','Active');
+        document.getElementById('vdot').className = 'v-dot scan';
+        document.getElementById('vtxt').textContent = 'Detecting Face…';
+
+        faceTimer = setTimeout(detectFace, 1800);
+        startGeo();
+
+    } catch(err) {
+        console.error('Camera error:', err.name, err.message);
+        let msg = '⚠️ Camera access denied.';
+        if (err.name === 'NotAllowedError')  msg = '⚠️ Camera blocked. Click the camera icon in address bar → Allow.';
+        if (err.name === 'NotFoundError')    msg = '⚠️ No camera found on this device.';
+        if (err.name === 'NotReadableError') msg = '⚠️ Camera in use by another app. Close it and try again.';
+        toast(msg, 6000);
+        document.getElementById('cam-ph').innerHTML = `
+            <div class="cam-ph-icon">⚠️</div>
+            <p><strong>Camera blocked</strong><br>Allow camera access in your browser, then try again.</p>
+            <button class="btn-start-inner" onclick="startCam()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+                </svg>
+                Try Again
+            </button>`;
+    }
+}
+
+function stopCam() {
+    if (stream) { stream.getTracks().forEach(t=>t.stop()); stream = null; }
+    if (faceTimer) { clearTimeout(faceTimer); faceTimer = null; }
+    const v = document.getElementById('cam-video');
+    v.srcObject = null; v.style.display = 'none';
+    faceDetected = false;
+    document.getElementById('cam-ph').style.display = 'flex';
+    document.getElementById('cam-ph').innerHTML = `
+        <div class="cam-ph-icon">📷</div>
+        <p>Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
+        <button class="btn-start-inner" onclick="startCam()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+            </svg>
+            Start Camera
+        </button>`;
+    document.getElementById('scan-line').classList.remove('on');
+    document.getElementById('face-box').classList.remove('show');
+    document.getElementById('btn-start').style.display = 'flex';
+    document.getElementById('btn-stop').style.display  = 'none';
+    document.getElementById('cam-state-txt').textContent = '● Camera Off';
+    document.getElementById('cam-state-txt').style.color = '';
+    setStatus('sd-cam','st-cam','Camera off','');
+    setStatus('sd-face','st-face','No face','');
+    setVerify('vi-cam','📷','📷','pend','Pending');
+    setVerify('vi-face','👤','👤','pend','Pending');
+    document.getElementById('vdot').className = 'v-dot';
+    document.getElementById('vtxt').textContent = 'Face and Location Detection Verification';
+    updateBtns();
+}
+
+function detectFace() {
+    faceDetected = true;
+    const box = document.getElementById('face-box');
+    box.style.cssText += 'top:14%;left:27%;width:46%;height:68%;';
+    box.classList.add('show');
+    setStatus('sd-face','st-face','Face detected ✓','#86efac');
+    setVerify('vi-face','👤','✅','ok','Detected');
+    document.getElementById('vdot').className = 'v-dot ok';
+    document.getElementById('vtxt').textContent = 'Face & Location Verified ✓';
+    evaluateReady();
+}
+
+function setStatus(dotId, txtId, msg, color) {
+    const d=document.getElementById(dotId), t=document.getElementById(txtId);
+    if(color){ d.classList.add('on'); t.style.color=color; } else { d.classList.remove('on'); t.style.color=''; }
+    t.textContent = msg;
+}
+function setVerify(prefix, oldIco, newIco, cls, stTxt) {
+    const i=document.getElementById(prefix+'-ico'), s=document.getElementById(prefix+'-st');
+    i.className='vi-ico '+cls; i.textContent=newIco;
+    s.className='vi-st '+cls; s.textContent=stTxt;
+}
+function evaluateReady() { updateBtns(); }
+function updateBtns() {
+    const ci=document.getElementById('btn-ci'), co=document.getElementById('btn-co');
+    const rdy = faceDetected && locOK;
+    if (typeof checkedOut !== 'undefined' && checkedOut) { ci.disabled=true; co.disabled=true; }
+    else if (typeof checkedIn !== 'undefined' && checkedIn) { ci.disabled=true; co.disabled=!rdy; }
+    else { ci.disabled=!rdy; co.disabled=true; }
+}
+function capturePhoto() {
+    const v=document.getElementById('cam-video'), c=document.getElementById('cam-canvas');
+    if (!v.videoWidth) return '';
+    c.width=v.videoWidth; c.height=v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0);
+    return c.toDataURL('image/jpeg',0.8);
+}
+
+function doCheckIn() {
+    if (!faceDetected) { toast('⚠️ No face detected. Face the camera.'); return; }
+    if (!locOK)        { toast('⚠️ Location not ready. Please wait.');   return; }
+    const p = capturePhoto();
+    document.getElementById('ci-lat').value   = userLat||'';
+    document.getElementById('ci-lng').value   = userLng||'';
+    document.getElementById('ci-addr').value  = userAddr||'';
+    document.getElementById('ci-photo').value = p;
+    toast('⏳ Recording check-in…');
+    document.getElementById('ci-form').submit();
+}
+function doCheckOut() {
+    if (!faceDetected) { toast('⚠️ No face detected. Face the camera.'); return; }
+    if (!locOK)        { toast('⚠️ Location not ready. Please wait.');   return; }
+    const p = capturePhoto();
+    document.getElementById('co-lat').value   = userLat||'';
+    document.getElementById('co-lng').value   = userLng||'';
+    document.getElementById('co-addr').value  = userAddr||'';
+    document.getElementById('co-photo').value = p;
+    toast('⏳ Recording check-out…');
+    document.getElementById('co-form').submit();
+}
+
+updateBtns();
+</script>
+{% endblock %}

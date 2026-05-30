@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Employee — HRD{% endblock %}
+
+{% block nav_hrd_employees %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pg-hdr {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: 12px; margin-bottom: 24px;
+  }
+  .pg-hdr-left h1 { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); }
+  .pg-hdr-left p  { font-size: .82rem; color: var(--text-muted); margin-top: 4px; }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat-panel {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 12px; padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: background var(--transition);
+  }
+  .stat-panel:hover { background: var(--bg-card-hover); }
+  .stat-ic {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; flex-shrink: 0;
+  }
+  .ic-blue  { background: rgba(59,130,246,.18); }
+  .ic-green { background: rgba(22,163,74,.18); }
+  .ic-gray  { background: rgba(255,255,255,.07); }
+  .stat-lbl { font-size: .68rem; font-weight: 700; color: var(--text-muted);
+              text-transform: uppercase; letter-spacing: .45px; margin-bottom: 5px; }
+  .stat-val { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+
+  .tbl-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 14px; overflow: hidden; margin-bottom: 24px;
+  }
+  .tbl-card-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .tbl-card-title { font-size: .92rem; font-weight: 700; color: var(--text-primary); }
+
+  .filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .search-wrap { position: relative; }
+  .search-wrap svg {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;
+  }
+  .search-wrap input {
+    padding: 8px 12px 8px 32px; background: var(--bg-input);
+    border: 1px solid var(--border-input); border-radius: 8px;
+    color: var(--text-primary); font-size: .8rem; font-family: inherit;
+    outline: none; width: 210px; transition: border-color .2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text-faint); }
+
+  .filter-select {
+    padding: 8px 10px; background: var(--bg-input);
+    border: 1px solid var(--border-input); border-radius: 8px;
+    color: var(--text-primary); font-size: .8rem; font-family: inherit;
+    outline: none; cursor: pointer; transition: border-color .2s;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+  .filter-select option { background: #1a2e4a; }
+
+  .btn-reset {
+    padding: 8px 13px; background: transparent;
+    border: 1px solid var(--border-input); border-radius: 8px;
+    color: var(--text-muted); font-size: .8rem; font-family: inherit;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    transition: all .2s;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent-light); }
+
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: rgba(255,255,255,.03); }
+  th {
+    padding: 11px 16px; text-align: left;
+    font-size: .69rem; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .4px;
+    border-bottom: 1px solid rgba(255,255,255,.07); white-space: nowrap;
+  }
+  td {
+    padding: 12px 16px; font-size: .83rem; color: var(--text-primary);
+    border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover td { background: rgba(255,255,255,.035); }
+
+  .emp-cell { display: flex; align-items: center; gap: 10px; }
+  .emp-av {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .66rem; font-weight: 700; color: #fff;
+    flex-shrink: 0; letter-spacing: .5px;
+  }
+  .emp-name  { font-weight: 600; font-size: .84rem; color: var(--text-primary); }
+  .emp-email { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: .69rem; font-weight: 700;
+  }
+  .badge-green  { background: rgba(22,163,74,.2);   color: #86efac; }
+  .badge-red    { background: rgba(220,38,38,.2);   color: #fca5a5; }
+  .badge-blue   { background: rgba(59,130,246,.2);  color: #93c5fd; }
+  .badge-gray   { background: rgba(255,255,255,.08); color: var(--text-muted); }
+
+  .status-dot { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green  { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,.5); }
+  .dot-red    { background: #f87171; }
+
+  .action-btns { display: flex; gap: 6px; }
+  .btn-xs {
+    padding: 5px 11px; border-radius: 6px;
+    font-size: .72rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; border: none;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+    transition: all .18s; white-space: nowrap;
+  }
+  .btn-xs-edit {
+    background: transparent; border: 1px solid rgba(59,130,246,.3); color: #93c5fd;
+  }
+  .btn-xs-edit:hover {
+    background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.6); color: #bfdbfe;
+  }
+  .btn-xs-deactivate {
+    background: transparent; border: 1px solid rgba(220,38,38,.25); color: #fca5a5;
+  }
+  .btn-xs-deactivate:hover { background: rgba(220,38,38,.15); border-color: rgba(220,38,38,.5); }
+  .btn-xs-activate {
+    background: transparent; border: 1px solid rgba(22,163,74,.3); color: #86efac;
+  }
+  .btn-xs-activate:hover { background: rgba(22,163,74,.15); border-color: rgba(22,163,74,.6); }
+
+  .tbl-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.07);
+    font-size: .75rem; color: var(--text-muted);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .pagination { display: flex; gap: 4px; align-items: center; }
+  .pg-btn {
+    min-width: 30px; height: 30px; padding: 0 6px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.12); background: transparent;
+    color: var(--text-muted); font-size: .78rem; cursor: pointer;
+    font-family: inherit; display: flex; align-items: center; justify-content: center;
+    transition: all .18s;
+  }
+  .pg-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-light); }
+  .pg-btn.active {
+    background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700;
+  }
+  .pg-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .pg-dots { color: var(--text-faint); padding: 0 3px; font-size: .8rem; line-height: 30px; }
+
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 20px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: .83rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; text-decoration: none;
+    transition: background .2s, transform .15s;
+  }
+  .btn-add:hover { background: var(--accent-light); color: #fff; transform: translateY(-1px); }
+
+  .empty-state {
+    text-align: center; padding: 52px 24px; color: var(--text-muted);
+  }
+  .empty-state svg { width: 52px; height: 52px; margin: 0 auto 16px; opacity: .3; display: block; }
+  .empty-state strong { display: block; font-size: .9rem; color: var(--text-primary); margin-bottom: 6px; }
+  .empty-state span { font-size: .81rem; }
+
+  #noResultRow { display: none; }
+  #noResultRow td { text-align: center; padding: 36px; color: var(--text-muted); font-size: .83rem; }
+
+  @media (max-width: 1100px) { .stat-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 700px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .pg-hdr, .tbl-card-hdr { flex-direction: column; align-items: flex-start; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .search-wrap input, .filter-select { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+
+{% block hrd_content %}
+
+<div class="pg-hdr">
+  <div class="pg-hdr-left">
+    <h1>Manage Employee</h1>
+    <p>Kelola seluruh data karyawan — lihat, edit, dan tambahkan akun baru.</p>
+  </div>
+  <a href="{% url 'hrd-create-employee' %}" class="btn-add">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+    </svg>
+    Add New Employee
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid">
+  <div class="stat-panel">
+    <div class="stat-ic ic-blue">
+      <i class="bi bi-people-fill" style="color:#60a5fa"></i>
+    </div>
+    <div>
+      <div class="stat-lbl">Total Accounts</div>
+      <div class="stat-val">{{ total_employees }}</div>
+    </div>
+  </div>
+  <div class="stat-panel">
+    <div class="stat-ic ic-green">
+      <i class="bi bi-person-check-fill" style="color:#4ade80"></i>
+    </div>
+    <div>
+      <div class="stat-lbl">Active Accounts</div>
+      <div class="stat-val">{{ active_employees }}</div>
+    </div>
+  </div>
+  <div class="stat-panel">
+    <div class="stat-ic ic-gray">
+      <i class="bi bi-person-dash-fill" style="color:var(--text-muted)"></i>
+    </div>
+    <div>
+      <div class="stat-lbl">Inactive Accounts</div>
+      <div class="stat-val">{{ inactive_employees }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Table Card -->
+<div class="tbl-card">
+  <div class="tbl-card-hdr">
+    <div class="tbl-card-title">
+      Employee Directory
+      <span style="font-size:.72rem;font-weight:400;color:var(--text-muted);margin-left:8px">
+        (<span id="visibleCount">{{ employees|length }}</span> ditampilkan)
+      </span>
+    </div>
+    <div class="filter-bar">
+
+      <div class="search-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+        </svg>
+        <input type="text" id="searchInput"
+               placeholder="Nama, ID, email..."
+               autocomplete="off">
+      </div>
+
+      <select class="filter-select" id="divFilter">
+        <option value="">All Division</option>
+        {% for div in divisions %}
+          <option value="{{ div|lower }}">{{ div }}</option>
+        {% endfor %}
+      </select>
+
+      <select class="filter-select" id="statusFilter">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+
+      <select class="filter-select" id="loginFilter">
+        <option value="">All Login</option>
+        <option value="successful">Successful</option>
+        <option value="failed">Failed</option>
+        <option value="never">Never</option>
+      </select>
+
+      <button class="btn-reset" onclick="resetFilters()">
+        <i class="bi bi-x-circle"></i> Reset
+      </button>
+
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Employee ID</th>
+          <th>NPWP</th>
+          <th>Division</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Login Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="empTbody">
+
+        {% if employees %}
+          {% for emp in employees %}
+          <tr
+            data-name="{{ emp.full_name|lower }}"
+            data-code="{{ emp.employee_code|lower }}"
+            data-email="{{ emp.user.email|lower }}"
+            data-div="{{ emp.division|lower|default:'' }}"
+            data-status="{% if emp.user.is_active %}active{% else %}inactive{% endif %}"
+            data-login="{{ emp.login_status|lower }}"
+          >
+            <td>
+              <div class="emp-cell">
+                <div class="emp-av" style="background:{{ emp.avatar_color }}">
+                  {{ emp.initials }}
+                </div>
+                <div>
+                  <div class="emp-name">{{ emp.full_name }}</div>
+                  <div class="emp-email">{{ emp.user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span style="font-family:monospace;font-size:.78rem;
+                           background:rgba(255,255,255,.06);padding:2px 8px;
+                           border-radius:4px;color:var(--accent-light)">
+                {{ emp.employee_code|default:"—" }}
+              </span>
+            </td>
+            <td>
+              <span style="font-size:.78rem;color:var(--text-muted)">
+                {{ emp.npwp|default:"—" }}
+              </span>
+            </td>
+            <td>
+              {% if emp.division %}
+                <span class="badge badge-blue">{{ emp.division }}</span>
+              {% else %}
+                <span style="color:var(--text-faint);font-size:.78rem">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if emp.user.is_active %}
+                <div class="status-dot"><span class="dot dot-green"></span> Active</div>
+              {% else %}
+                <div class="status-dot"><span class="dot dot-red"></span> Inactive</div>
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-size:.77rem;color:var(--text-muted)">
+                {% if emp.user.last_login %}
+                  {{ emp.user.last_login|date:"d M Y" }},
+                  {{ emp.user.last_login|date:"H:i" }}
+                {% else %}
+                  <em style="opacity:.4">Never</em>
+                {% endif %}
+              </span>
+            </td>
+            <td>
+              {% if emp.login_status == 'Successful' %}
+                <span class="badge badge-green">Successful</span>
+              {% elif emp.login_status == 'Failed' %}
+                <span class="badge badge-red">Failed</span>
+              {% else %}
+                <span class="badge badge-gray">Never</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="action-btns">
+                <a href="{% url 'hrd-edit-employee' emp.user.pk %}"
+                   class="btn-xs btn-xs-edit">
+                  <i class="bi bi-pencil-fill" style="font-size:.62rem"></i> Edit
+                </a>
+                <form method="post"
+                      action="{% url 'hrd-toggle-employee' emp.user.pk %}"
+                      style="margin:0"
+                      onsubmit="return confirmToggle('{{ emp.full_name }}', {{ emp.user.is_active|yesno:'true,false' }})">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn-xs {% if emp.user.is_active %}btn-xs-deactivate{% else %}btn-xs-activate{% endif %}">
+                    {% if emp.user.is_active %}
+                      <i class="bi bi-person-slash" style="font-size:.65rem"></i> Deactivate
+                    {% else %}
+                      <i class="bi bi-person-check" style="font-size:.65rem"></i> Activate
+                    {% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+
+        {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <strong>Belum ada data karyawan</strong>
+                <span>Mulai dengan <a href="{% url 'hrd-create-employee' %}" style="color:var(--accent-light)">menambahkan karyawan pertama</a>.</span>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
+
+        <!-- No result setelah filter (dikontrol JS) -->
+        <tr id="noResultRow">
+          <td colspan="8" style="text-align:center;padding:36px;color:var(--text-muted);font-size:.83rem">
+            <i class="bi bi-search" style="font-size:1.4rem;opacity:.3;display:block;margin-bottom:8px"></i>
+            Tidak ada karyawan yang cocok dengan filter ini.
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl-footer">
+    <span>
+      Menampilkan <strong id="showStart">1</strong>–<strong id="showEnd">0</strong>
+      dari <strong>{{ employees|length }}</strong> karyawan
+    </span>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+  const ROWS_PER_PAGE = 10;
+  let currentPage  = 1;
+  let filteredRows = [];
+
+  const allRows   = Array.from(document.querySelectorAll('#empTbody tr[data-name]'));
+  const noResult  = document.getElementById('noResultRow');
+  const searchInp = document.getElementById('searchInput');
+  const divSel    = document.getElementById('divFilter');
+  const statusSel = document.getElementById('statusFilter');
+  const loginSel  = document.getElementById('loginFilter');
+  const cntEl     = document.getElementById('visibleCount');
+  const showStart = document.getElementById('showStart');
+  const showEnd   = document.getElementById('showEnd');
+  const pgWrap    = document.getElementById('pagination');
+
+  function applyFilters() {
+    const q      = searchInp.value.toLowerCase().trim();
+    const div    = divSel.value.toLowerCase();
+    const status = statusSel.value;
+    const login  = loginSel.value;
+
+    filteredRows = allRows.filter(r => {
+      if (q && !(r.dataset.name.includes(q) || r.dataset.code.includes(q) || r.dataset.email.includes(q))) return false;
+      if (div    && r.dataset.div    !== div)    return false;
+      if (status && r.dataset.status !== status) return false;
+      if (login  && r.dataset.login  !== login)  return false;
+      return true;
+    });
+
+    currentPage = 1;
+    render();
+  }
+
+  function render() {
+    const total      = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+    currentPage      = Math.min(currentPage, totalPages);
+
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end   = Math.min(start + ROWS_PER_PAGE, total);
+
+    allRows.forEach(r => r.style.display = 'none');
+    filteredRows.slice(start, end).forEach(r => r.style.display = '');
+    noResult.style.display = total === 0 ? '' : 'none';
+
+    if (cntEl)     cntEl.textContent      = total;
+    if (showStart) showStart.textContent  = total === 0 ? 0 : start + 1;
+    if (showEnd)   showEnd.textContent    = end;
+
+    buildPagination(totalPages);
+  }
+
+  function buildPagination(totalPages) {
+    pgWrap.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    pgWrap.appendChild(makeBtn('‹', currentPage === 1, () => { currentPage--; render(); }));
+
+    getPageRange(currentPage, totalPages).forEach(p => {
+      if (p === '…') {
+        const s = document.createElement('span');
+        s.className = 'pg-dots'; s.textContent = '…';
+        pgWrap.appendChild(s);
+      } else {
+        const b = makeBtn(p, false, () => { currentPage = p; render(); });
+        if (p === currentPage) b.classList.add('active');
+        pgWrap.appendChild(b);
+      }
+    });
+
+    pgWrap.appendChild(makeBtn('›', currentPage === totalPages, () => { currentPage++; render(); }));
+  }
+
+  function makeBtn(label, disabled, cb) {
+    const b = document.createElement('button');
+    b.className = 'pg-btn';
+    b.textContent = label;
+    b.disabled = disabled;
+    if (!disabled) b.addEventListener('click', cb);
+    return b;
+  }
+
+  function getPageRange(cur, total) {
+    if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+    const r = [1];
+    if (cur > 3) r.push('…');
+    for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) r.push(i);
+    if (cur < total - 2) r.push('…');
+    r.push(total);
+    return r;
+  }
+
+  let timer;
+  searchInp.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(applyFilters, 160); });
+  divSel.addEventListener('change',    applyFilters);
+  statusSel.addEventListener('change', applyFilters);
+  loginSel.addEventListener('change',  applyFilters);
+
+  window.resetFilters = function () {
+    searchInp.value = divSel.value = statusSel.value = loginSel.value = '';
+    applyFilters();
+  };
+
+  window.confirmToggle = function (name, isActive) {
+    return confirm(isActive
+      ? 'Nonaktifkan akun "' + name + '"?\nMereka tidak bisa login.'
+      : 'Aktifkan kembali akun "' + name + '"?');
+  };
+
+  applyFilters();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Employee — HRD{% endblock %}
+{% block nav_hrd_employees %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pg-hdr { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+  .pg-hdr-left h1 { font-size:1.35rem; font-weight:700; color:var(--text-primary); }
+  .pg-hdr-left p  { font-size:.82rem; color:var(--text-muted); margin-top:4px; }
+
+  .breadcrumb { display:flex; align-items:center; gap:6px; font-size:.78rem; color:var(--text-muted); margin-bottom:20px; }
+  .breadcrumb a { color:var(--accent-light); text-decoration:none; transition:color var(--transition); }
+  .breadcrumb a:hover { color:#fff; }
+  .breadcrumb-sep { opacity:.4; }
+
+  .form-card { background:var(--bg-card); border:1px solid var(--border-card); border-radius:14px; overflow:hidden; }
+
+  .form-card-hdr { display:flex; align-items:center; gap:12px; padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .form-card-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; background:rgba(59,130,246,.18); }
+  .form-card-hdr h2 { font-size:.95rem; font-weight:700; color:var(--text-primary); margin:0; }
+  .form-card-hdr p  { font-size:.76rem; color:var(--text-muted); margin:2px 0 0; }
+
+  .form-body { padding:24px; }
+
+  .section-label { font-size:.68rem; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-muted); margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+  .section-label::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.07); }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+
+  .form-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-muted); }
+  .form-label .req { color:#f87171; margin-left:2px; }
+
+  .form-input, .form-select {
+    width:100%; background:var(--bg-input); border:1px solid var(--border-input);
+    color:var(--text-primary); padding:9px 12px; border-radius:8px;
+    font-size:.85rem; font-family:inherit; outline:none;
+    transition:border-color .2s, background .2s; appearance:none; -webkit-appearance:none;
+  }
+  .form-input:focus, .form-select:focus { border-color:var(--accent); background:rgba(59,130,246,.04); }
+  .form-input::placeholder { color:var(--text-faint); }
+
+  .select-wrap { position:relative; }
+  .select-wrap::after { content:''; pointer-events:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid var(--text-muted); }
+  .select-wrap .form-select { padding-right:32px; }
+  .form-select option { background:#1a2e4a; color:var(--text-primary); }
+
+  .form-hint { font-size:.7rem; color:var(--text-faint); margin-top:1px; }
+
+  .password-wrap { position:relative; }
+  .password-wrap .form-input { padding-right:40px; }
+  .toggle-pw { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
+  .toggle-pw:hover { color:var(--text-primary); }
+
+  .pw-strength { display:flex; gap:4px; margin-top:6px; }
+  .pw-bar { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.1); transition:background .3s; }
+  .pw-bar.weak   { background:#ef4444; }
+  .pw-bar.medium { background:#f59e0b; }
+  .pw-bar.strong { background:#22c55e; }
+  .pw-hint { font-size:.68rem; color:var(--text-faint); margin-top:4px; }
+
+  .divider { border:none; border-top:1px solid rgba(255,255,255,.07); margin:20px 0 24px; }
+
+  .form-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:18px 24px; border-top:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.02); }
+  .btn-group { display:flex; gap:10px; align-items:center; }
+
+  .btn-submit { display:inline-flex; align-items:center; gap:7px; padding:9px 22px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:.83rem; font-weight:600; font-family:inherit; cursor:pointer; text-decoration:none; transition:background .2s, transform .15s; }
+  .btn-submit:hover { background:var(--accent-light); transform:translateY(-1px); }
+
+  .btn-cancel { display:inline-flex; align-items:center; gap:7px; padding:9px 18px; background:transparent; border:1px solid var(--border-input); color:var(--text-muted); border-radius:8px; font-size:.83rem; font-weight:600; font-family:inherit; cursor:pointer; text-decoration:none; transition:all .2s; }
+  .btn-cancel:hover { border-color:rgba(255,255,255,.25); color:var(--text-primary); }
+
+  .required-note { font-size:.73rem; color:var(--text-faint); }
+  .required-note span { color:#f87171; }
+
+  @media (max-width:700px) {
+    .form-row { grid-template-columns:1fr; }
+    .form-body { padding:16px; }
+    .form-footer { flex-direction:column; align-items:stretch; }
+    .btn-group { flex-direction:column; }
+    .btn-submit, .btn-cancel { justify-content:center; }
+  }
+</style>
+{% endblock %}
+
+
+{% block hrd_content %}
+
+<div class="breadcrumb">
+  <a href="{% url 'hrd-employees' %}">
+    <i class="bi bi-person-badge" style="font-size:.8rem"></i> Manage Employee
+  </a>
+  <span class="breadcrumb-sep">/</span>
+  <span>Add New Employee</span>
+</div>
+
+<div class="pg-hdr">
+  <div class="pg-hdr-left">
+    <h1>Add New Employee</h1>
+    <p>Daftarkan akun karyawan baru. Data akan langsung tersimpan ke database.</p>
+  </div>
+  <a href="{% url 'hrd-employees' %}" class="btn-cancel" style="align-self:flex-start">
+    <i class="bi bi-arrow-left" style="font-size:.8rem"></i> Back to List
+  </a>
+</div>
+
+<div class="form-card">
+  <div class="form-card-hdr">
+    <div class="form-card-icon">
+      <i class="bi bi-person-plus-fill" style="color:#60a5fa"></i>
+    </div>
+    <div>
+      <h2>Employee Account Information</h2>
+      <p>Semua kolom bertanda <span style="color:#f87171">*</span> wajib diisi.</p>
+    </div>
+  </div>
+
+  <form method="POST" action="{% url 'hrd-create-employee' %}">
+    {% csrf_token %}
+    <div class="form-body">
+
+      {% if messages %}
+        <div style="margin-bottom:20px">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert" style="font-size:.82rem">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Section: Login Credentials -->
+      <p class="section-label">Login Credentials</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Username <span class="req">*</span></label>
+          {# views.py: request.POST.get('username') #}
+          <input type="text" name="username" class="form-input"
+                 placeholder="e.g. john.doe"
+                 value="{{ form_data.username|default:'' }}"
+                 autocomplete="off" required>
+          <span class="form-hint">Digunakan untuk login. Tidak bisa diubah setelah dibuat.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span class="req">*</span></label>
+          {# views.py: request.POST.get('password') #}
+          <div class="password-wrap">
+            <input type="password" name="password" id="pwInput" class="form-input"
+                   placeholder="Min. 8 karakter"
+                   autocomplete="new-password" required>
+            <button type="button" class="toggle-pw" id="togglePw" aria-label="Toggle password">
+              <i class="bi bi-eye" id="pwIcon"></i>
+            </button>
+          </div>
+          <div class="pw-strength">
+            <div class="pw-bar" id="bar1"></div>
+            <div class="pw-bar" id="bar2"></div>
+            <div class="pw-bar" id="bar3"></div>
+          </div>
+          <span class="pw-hint" id="pwHint">Minimal 8 karakter</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Section: Personal Info -->
+      <p class="section-label">Personal Info</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name <span class="req">*</span></label>
+          {# views.py: request.POST.get('first_name') #}
+          <input type="text" name="first_name" class="form-input"
+                 placeholder="e.g. John"
+                 value="{{ form_data.first_name|default:'' }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          {# views.py: request.POST.get('last_name') #}
+          <input type="text" name="last_name" class="form-input"
+                 placeholder="e.g. Doe"
+                 value="{{ form_data.last_name|default:'' }}">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          {# views.py: request.POST.get('email') — cek duplikat #}
+          <input type="email" name="email" class="form-input"
+                 placeholder="john@company.co.id"
+                 value="{{ form_data.email|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          {# views.py: request.POST.get('phone') → profile.phone #}
+          <input type="text" name="phone" class="form-input"
+                 placeholder="e.g. 08123456789"
+                 value="{{ form_data.phone|default:'' }}">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Section: Employment -->
+      <p class="section-label">Employment</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department / Division</label>
+          {# views.py: request.POST.get('department') → profile.department #}
+          <input type="text" name="department" class="form-input"
+                 placeholder="e.g. Digital & Technology"
+                 value="{{ form_data.department|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Join Date</label>
+          {# views.py: request.POST.get('join_date') → profile.join_date (ISO format) #}
+          <input type="date" name="join_date" class="form-input"
+                 value="{{ form_data.join_date|default:'' }}">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="form-footer">
+      <span class="required-note">Kolom bertanda <span>*</span> wajib diisi.</span>
+      <div class="btn-group">
+        <a href="{% url 'hrd-employees' %}" class="btn-cancel">
+          <i class="bi bi-x-lg" style="font-size:.72rem"></i> Cancel
+        </a>
+        <button type="submit" class="btn-submit">
+          <i class="bi bi-plus-circle-fill" style="font-size:.8rem"></i>
+          Save Employee
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+  /* ── Toggle password visibility ── */
+  const pwInput  = document.getElementById('pwInput');
+  const togglePw = document.getElementById('togglePw');
+  const pwIcon   = document.getElementById('pwIcon');
+
+  if (togglePw && pwInput) {
+    togglePw.addEventListener('click', () => {
+      const isText = pwInput.type === 'text';
+      pwInput.type = isText ? 'password' : 'text';
+      pwIcon.className = isText ? 'bi bi-eye' : 'bi bi-eye-slash';
+    });
+  }
+
+  /* ── Password strength indicator ── */
+  const bar1   = document.getElementById('bar1');
+  const bar2   = document.getElementById('bar2');
+  const bar3   = document.getElementById('bar3');
+  const pwHint = document.getElementById('pwHint');
+
+  function checkStrength(val) {
+    const len     = val.length;
+    const hasNum  = /\d/.test(val);
+    const hasSym  = /[^a-zA-Z0-9]/.test(val);
+    const hasMix  = /[a-z]/.test(val) && /[A-Z]/.test(val);
+
+    if (len < 8) {
+      return { level: 0, label: 'Minimal 8 karakter', color: null };
+    } else if (len < 10 || !(hasNum || hasSym)) {
+      return { level: 1, label: 'Lemah — tambahkan angka atau simbol', color: 'weak' };
+    } else if (len < 12 || !(hasMix && (hasNum || hasSym))) {
+      return { level: 2, label: 'Cukup — coba kombinasikan huruf besar & angka', color: 'medium' };
+    } else {
+      return { level: 3, label: 'Kuat ✓', color: 'strong' };
+    }
+  }
+
+  if (pwInput && bar1) {
+    pwInput.addEventListener('input', () => {
+      const { level, label, color } = checkStrength(pwInput.value);
+      [bar1, bar2, bar3].forEach((b, i) => {
+        b.className = 'pw-bar' + (color && i < level ? ' ' + color : '');
+      });
+      if (pwHint) pwHint.textContent = label;
+    });
+  }
+})();
+</script>
+{% endblock %}

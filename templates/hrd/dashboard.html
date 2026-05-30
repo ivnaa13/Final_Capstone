@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% block title %}HRD Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+    :root {
+        --navy:#1e3a5f; --navy-dk:#162d4a; --navy-md:#2d4a7a; --navy-light:#3a5a8f;
+        --card:#0f1f38; --bg:#0a1628; --white:#fff; --border:rgba(255,255,255,0.07);
+        --text:#e8f0fb; --muted:#8aaac8; --font:'Plus Jakarta Sans',sans-serif;
+        --red:#dc3545; --green:#28a745; --orange:#fd7e14; --blue:#3b82f6;
+        --accent-dark:#e8f0fb;
+    }
+
+    /* Welcome banner */
+    .welcome {
+        font-size: 1.1rem; font-weight: 700;
+        color: var(--text);
+        text-align: center;
+        letter-spacing: .8px;
+        margin-bottom: 18px;
+        opacity: .85;
+    }
+
+    /* Charts row */
+    .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 270px;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    .chart-card {
+        background: #132032;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+    }
+    .chart-wrap { position: relative; height: 195px; }
+
+    .pie-card {
+        background: #132032;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+    }
+    .pie-title {
+        font-size: .85rem; font-weight: 700;
+        color: var(--text);
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .pie-wrap { position: relative; height: 150px; }
+    .leg { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .leg-i { display: flex; align-items: center; gap: 7px; font-size: .72rem; color: var(--muted); }
+    .leg-d { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* KPI row */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .kpi {
+        background: #132032;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: background .2s;
+    }
+    .kpi:hover { background: #1a2e4a; }
+    .kpi-l {
+        font-size: .65rem; font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase; letter-spacing: .4px;
+        margin-bottom: 5px;
+    }
+    .kpi-v { font-size: 1.8rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .kpi-sub { font-size: .65rem; color: var(--muted); margin-top: 3px; }
+    .kpi-ic {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .ic-g { background: rgba(22,163,74,0.18); color: #4ade80; }
+    .ic-r { background: rgba(220,38,38,0.18); color: #f87171; }
+    .ic-o { background: rgba(217,119,6,0.18); color: #fbbf24; }
+    .ic-b { background: rgba(59,130,246,0.18); color: #60a5fa; }
+
+    /* Table card — now full width */
+    .tbl-card {
+        background: #132032;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 14px;
+    }
+    .tbl-hdr {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+    .tbl-hdr h3 { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .tbl-wrap { overflow-x: auto; }
+    .hrd-table { width: 100%; border-collapse: collapse; }
+    .hrd-table thead { background: rgba(255,255,255,0.04); }
+    .hrd-table th {
+        padding: 10px 14px;
+        text-align: left;
+        font-size: .67rem; font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase; letter-spacing: .4px;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--border);
+    }
+    .hrd-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        color: var(--text);
+        font-size: .8rem;
+        vertical-align: middle;
+    }
+    .hrd-table tr:last-child td { border-bottom: none; }
+    .hrd-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .emp-cell { display: flex; align-items: center; gap: 10px; }
+    .emp-av-txt {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        font-size: .62rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; color: #fff;
+    }
+    .emp-nm { font-weight: 600; font-size: .8rem; color: var(--text); line-height: 1.2; }
+    .emp-dp { font-size: .68rem; color: var(--muted); }
+
+    .hrd-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: .65rem; font-weight: 700;
+        letter-spacing: .2px;
+        white-space: nowrap;
+    }
+    .b-present { background: rgba(22,163,74,0.2); color: #86efac; }
+    .b-late    { background: rgba(217,119,6,0.2);  color: #fcd34d; }
+    .b-overtime{ background: rgba(22,163,74,0.2);  color: #86efac; }
+
+    .clk-val { color: var(--text); font-weight: 500; }
+    .clk-red { color: #f87171; font-weight: 600; }
+
+    .tbl-footer {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px;
+        border-top: 1px solid var(--border);
+        font-size: .72rem; color: var(--muted);
+    }
+    .pg-wrap { display: flex; align-items: center; gap: 4px; }
+    .pg-btn {
+        width: 28px; height: 28px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.05);
+        display: flex; align-items: center; justify-content: center;
+        font-size: .72rem; cursor: pointer;
+        color: var(--text);
+        transition: all .15s;
+    }
+    .pg-btn:hover { background: rgba(255,255,255,0.1); }
+    .pg-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+    @media (max-width: 1100px) {
+        .charts-row { grid-template-columns: 1fr; }
+        .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block nav_hrd_dashboard %}active{% endblock %}
+
+{% block hrd_content %}
+
+<div class="welcome">WELCOME HRD!</div>
+
+<!-- Charts -->
+<div class="charts-row">
+    <div class="chart-card">
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="pie-card">
+        <div class="pie-title">Attendance by Department</div>
+        <div class="pie-wrap"><canvas id="pieChart"></canvas></div>
+        <div class="leg">
+            <div class="leg-i"><div class="leg-d" style="background:#3b82f6"></div>Finance &amp; Planning</div>
+            <div class="leg-i"><div class="leg-d" style="background:#ef4444"></div>People &amp; Culture</div>
+            <div class="leg-i"><div class="leg-d" style="background:#94a3b8"></div>Audience &amp; Commercial</div>
+            <div class="leg-i"><div class="leg-d" style="background:#06b6d4"></div>Digital &amp; Technology</div>
+            <div class="leg-i"><div class="leg-d" style="background:#10b981"></div>Brand &amp; Communications</div>
+            <div class="leg-i"><div class="leg-d" style="background:#a855f7"></div>Broadcast Operations</div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+    <div class="kpi">
+        <div>
+            <div class="kpi-l">Total Employees</div>
+            <div class="kpi-v">{{ total_employees }}</div>
+            <div class="kpi-sub">This month</div>
+        </div>
+        <div class="kpi-ic ic-g">👥</div>
+    </div>
+    <div class="kpi">
+        <div>
+            <div class="kpi-l">Present Today</div>
+            <div class="kpi-v">{{ present_today }}</div>
+            <div class="kpi-sub">This month</div>
+        </div>
+        <div class="kpi-ic ic-g">✓</div>
+    </div>
+    <div class="kpi">
+        <div>
+            <div class="kpi-l">Late Today</div>
+            <div class="kpi-v">{{ late_today }}</div>
+            <div class="kpi-sub">This month</div>
+        </div>
+        <div class="kpi-ic ic-o">🕐</div>
+    </div>
+    <div class="kpi">
+        <div>
+            <div class="kpi-l">Pending Leaves</div>
+            <div class="kpi-v">{{ pending_leaves }}</div>
+            <div class="kpi-sub">This month</div>
+        </div>
+        <div class="kpi-ic ic-b">📋</div>
+    </div>
+</div>
+
+<!-- Table — full width, System Activity removed (moved to bell notification) -->
+<div class="tbl-card">
+    <div class="tbl-hdr">
+        <h3>Recent Attendance</h3>
+    </div>
+    <div class="tbl-wrap">
+        <table class="hrd-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" onchange="toggleAllDash(this)"></th>
+                    <th>Employee Name</th>
+                    <th>Status</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Reason</th>
+                    <th>Department</th>
+                </tr>
+            </thead>
+            <tbody id="dash-tbody"></tbody>
+        </table>
+    </div>
+    <div class="tbl-footer">
+        <span id="dash-showing"></span>
+        <div class="pg-wrap">
+            <button class="pg-btn" onclick="dashPage(-1)">&#8249;</button>
+            <button class="pg-btn active" id="dpg1" onclick="goDashPage(1)">1</button>
+            <button class="pg-btn" id="dpg2" onclick="goDashPage(2)">2</button>
+            <button class="pg-btn" id="dpg3" onclick="goDashPage(3)">3</button>
+            <button class="pg-btn" onclick="dashPage(1)">&#8250;</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── ATT DATA dari DB (via context) ──
+const ATT_DATA = [
+    {% for rec in recent_attendances %}
+    {
+        name: "{{ rec.user.get_full_name|default:rec.user.username }}",
+        div:  "{{ rec.user.profile.department|default:'-' }}",
+        status: "{{ rec.status }}",
+        cin:  "{{ rec.check_in|date:'H:i'|default:'-' }}",
+        cout: "{{ rec.check_out|date:'H:i'|default:'-' }}",
+        date: "{{ rec.date|date:'d/m/Y' }}",
+        initials: "{{ rec.user.first_name|first|upper }}{{ rec.user.last_name|first|upper }}"
+    },
+    {% endfor %}
+];
+
+// ── CHARTS ──
+function initCharts() {
+    const labels = [0,1,2,3,4,5,6,7];
+    let pres = new Array(8).fill(0), late = new Array(8).fill(0);
+    ATT_DATA.forEach((r,i) => {
+        const bucket = i % 8;
+        if (r.status === 'present') pres[bucket] += 9;
+        else late[bucket] += 4;
+    });
+    pres = pres.map(v => Math.min(100, v + 25));
+    late = late.map(v => Math.min(100, v + 10));
+
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label:'Present', data:pres, backgroundColor:'#3b82f6', borderRadius:4, barPercentage:.42 },
+                { label:'Late',    data:late, backgroundColor:'rgba(59,130,246,0.3)', borderRadius:4, barPercentage:.42 },
+            ]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ display:false } },
+            scales: {
+                x:{ grid:{ display:false }, ticks:{ color:'#8aaac8', font:{ size:10 } } },
+                y:{ grid:{ color:'rgba(255,255,255,0.05)' }, ticks:{ color:'#8aaac8', font:{ size:9 }, stepSize:25 }, min:0, max:100 }
+            }
+        }
+    });
+
+    // Pie — department breakdown
+    const divMap = {};
+    ATT_DATA.forEach(r => { divMap[r.div] = (divMap[r.div] || 0) + 1; });
+    const divOrder = ['Finance & Planning','People & Culture','Audience & Commercial','Digital & Technology','Brand & Communications','Broadcast Operations'];
+    const divData  = divOrder.map(d => divMap[d] || 0);
+    new Chart(document.getElementById('pieChart'), {
+        type: 'doughnut',
+        data: {
+            labels: divOrder,
+            datasets:[{ data:divData, backgroundColor:['#3b82f6','#ef4444','#94a3b8','#06b6d4','#10b981','#a855f7'], borderColor:'#132032', borderWidth:2, hoverOffset:5 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    });
+}
+
+// ── DASHBOARD TABLE ──
+const PER = 10;
+let dashCurPage = 1;
+
+function initials(name) { return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase(); }
+function avatarBg(name) {
+    const cs = ['#3b82f6','#06b6d4','#10b981','#a855f7','#ef4444','#f59e0b'];
+    return cs[name.charCodeAt(0) % cs.length];
+}
+
+function renderDashTable(page = 1) {
+    dashCurPage = page;
+    const start = (page - 1) * PER;
+    const data  = ATT_DATA.slice(start, start + PER);
+    document.getElementById('dash-tbody').innerHTML = data.map(r => {
+        const s  = r.status === 'late' ? 'LATE' : 'PRESENT';
+        const bc = r.status === 'late' ? 'b-late' : 'b-present';
+        const coutClass = r.status === 'late' ? 'clk-red' : 'clk-val';
+        return `<tr>
+            <td><input type="checkbox"></td>
+            <td><div class="emp-cell">
+                <div class="emp-av-txt" style="background:${avatarBg(r.name)}">${initials(r.name)}</div>
+                <div><div class="emp-nm">${r.name}</div><div class="emp-dp">${r.div}</div></div>
+            </div></td>
+            <td><span class="hrd-badge ${bc}">${s}</span></td>
+            <td class="clk-val">${r.date}<br><small style="color:#8aaac8">${r.cin}</small></td>
+            <td class="${coutClass}">${r.date}<br><small>${r.cout}</small></td>
+            <td style="color:#8aaac8">${r.status === 'late' ? 'Late arrival' : '—'}</td>
+            <td style="font-size:.72rem;color:#8aaac8">${r.div}</td>
+        </tr>`;
+    }).join('');
+    const tot = ATT_DATA.length;
+    document.getElementById('dash-showing').textContent =
+        `Showing ${Math.min(start+1,tot)} to ${Math.min(start+PER,tot)} of ${tot} entries`;
+    [1,2,3].forEach(i => {
+        const b = document.getElementById(`dpg${i}`);
+        if (b) b.className = 'pg-btn' + (i === page ? ' active' : '');
+    });
+}
+
+function dashPage(d) { goDashPage(Math.max(1, Math.min(3, dashCurPage + d))); }
+function goDashPage(p) { renderDashTable(p); }
+function toggleAllDash(cb) {
+    document.querySelectorAll('#dash-tbody input[type=checkbox]').forEach(c => c.checked = cb.checked);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    renderDashTable(1);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+{% block title %}Profil Saya{% endblock %}
+{% block nav_emp_dashboard %}{% endblock %}{# tidak ada nav aktif khusus untuk profile #}
+
+{% block extra_css %}
+<style>
+/* ── PAGE HEADER ── */
+.emp-header {
+    margin-bottom: 24px;
+}
+.emp-header h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.emp-header p { font-size: .84rem; color: var(--muted); }
+
+/* ── MAIN LAYOUT ── */
+.emp-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 22px;
+    align-items: start;
+}
+
+/* ── PROFILE CARD (left) ── */
+.profile-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* Avatar section */
+.avatar-section {
+    background: linear-gradient(135deg, var(--navy) 0%, #1a2e4a 100%);
+    padding: 32px 24px 28px;
+    text-align: center;
+}
+
+.avatar-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(59,130,246,.22);
+    border: 3px solid rgba(59,130,246,.45);
+    display: grid;
+    place-items: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #93c5fd;
+    margin: 0 auto 14px;
+}
+.avatar-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+.avatar-role {
+    font-size: .76rem;
+    color: rgba(255,255,255,.5);
+    margin-top: 3px;
+}
+
+/* Profile info rows */
+.profile-info { padding: 6px 20px 16px; }
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    font-size: .83rem;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--muted); font-weight: 500; }
+.info-val   { font-weight: 600; color: var(--text); text-align: right; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Google badge */
+.google-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    color: rgba(255,255,255,.7);
+    margin-top: 14px;
+}
+
+/* ── RIGHT PANEL ── */
+.right-panel { display: flex; flex-direction: column; gap: 18px; }
+
+/* ── INFO READONLY CARD ── */
+.info-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.info-card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.info-card-header h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.info-card-body { padding: 20px 24px; }
+
+.readonly-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(217,119,6,.12);
+    border: 1px solid rgba(217,119,6,.25);
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    color: #fcd34d;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 0;
+}
+
+.detail-item {}
+.detail-item label {
+    display: block;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+.detail-item .detail-val {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,.04);
+    border: 1.5px solid rgba(255,255,255,.07);
+    border-radius: 9px;
+    font-size: .87rem;
+    color: var(--muted);
+    cursor: not-allowed;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.detail-item.full { grid-column: span 2; }
+
+/* ── PHONE EDIT CARD ── */
+.phone-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.phone-card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+}
+.phone-card-header h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.phone-card-body { padding: 22px 24px; }
+
+.fg { margin-bottom: 16px; }
+.fg:last-child { margin-bottom: 0; }
+.fg label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 7px;
+}
+.fg input {
+    width: 100%;
+    padding: 10px 14px;
+    background: #162033;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: .88rem;
+    font-family: var(--font);
+    color: var(--text);
+    outline: none;
+    transition: border-color .18s, background .18s;
+}
+.fg input:focus {
+    border-color: var(--accent);
+    background: #1a2840;
+}
+.fg input::placeholder { color: var(--faint); }
+
+.fg .field-hint {
+    font-size: .71rem;
+    color: var(--muted);
+    margin-top: 5px;
+    display: block;
+}
+
+/* Save button */
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: .88rem;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all .18s;
+}
+.btn-save:hover { background: var(--accent-light); transform: translateY(-1px); }
+
+/* ── ACCOUNT DANGER ZONE ── */
+.danger-zone {
+    background: rgba(220,38,38,.08);
+    border: 1.5px solid rgba(220,38,38,.25);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.danger-info h4 { font-size: .88rem; font-weight: 700; color: #fca5a5; margin-bottom: 4px; }
+.danger-info p  { font-size: .78rem; color: rgba(252,165,165,.7); }
+.btn-danger-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: .84rem;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .18s;
+    white-space: nowrap;
+}
+.btn-danger-logout:hover { background: #b91c1c; }
+
+@media(max-width:900px){
+    .emp-layout  { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .detail-item.full { grid-column: span 1; }
+}
+</style>
+{% endblock %}
+
+
+{% block emp_content %}
+
+<div class="emp-header">
+    <h1>Profil Saya</h1>
+    <p>Informasi akun Anda — hanya nomor HP yang dapat diubah</p>
+</div>
+
+{% if messages %}
+<div style="margin-bottom:20px;">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="emp-layout">
+
+    <!-- ═══════════════════════
+         LEFT — PROFILE CARD
+    ═══════════════════════ -->
+    <div class="profile-card">
+        <div class="avatar-section">
+            <div class="avatar-circle">
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+            </div>
+            <div class="avatar-name">
+                {{ user.get_full_name|default:user.username }}
+            </div>
+            <div class="avatar-role">
+                {% if user.is_staff %}Admin{% else %}Employee{% endif %}
+            </div>
+        </div>
+
+        <div class="profile-info">
+            <div class="info-row">
+                <span class="info-label">Username</span>
+                <span class="info-val">{{ user.username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-val" style="font-size:.76rem;">
+                    {{ user.email|default:"—" }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">No. HP</span>
+                <span class="info-val">
+                    {{ user.profile.phone|default:"Belum diisi" }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Bergabung</span>
+                <span class="info-val">{{ user.date_joined|date:"d M Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Login Terakhir</span>
+                <span class="info-val" style="font-size:.74rem;">
+                    {{ user.last_login|date:"d M Y, H:i"|default:"—" }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tipe Akun</span>
+                <span class="info-val">
+                    {% if user.is_staff %}
+                        <span style="color:#93c5fd;font-weight:700;">Admin</span>
+                    {% else %}
+                        <span style="color:#86efac;font-weight:700;">Employee</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if google_connected %}
+            <div style="text-align:center; margin-top:12px;">
+                <span class="google-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66 2.84z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Terhubung dengan Google
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ═══════════════════════
+         RIGHT PANEL
+    ═══════════════════════ -->
+    <div class="right-panel">
+
+        <!-- Informasi Akun (Read-Only) -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h3>🪪 Informasi Akun</h3>
+                <span class="readonly-notice">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6
+                                 a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Tidak dapat diubah
+                </span>
+            </div>
+            <div class="info-card-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Nama Depan</label>
+                        <span class="detail-val" title="{{ user.first_name }}">
+                            {{ user.first_name|default:"—" }}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Nama Belakang</label>
+                        <span class="detail-val" title="{{ user.last_name }}">
+                            {{ user.last_name|default:"—" }}
+                        </span>
+                    </div>
+                    <div class="detail-item full">
+                        <label>Username</label>
+                        <span class="detail-val">{{ user.username }}</span>
+                    </div>
+                    <div class="detail-item full">
+                        <label>Email</label>
+                        <span class="detail-val">{{ user.email|default:"—" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Bergabung Sejak</label>
+                        <span class="detail-val">{{ user.date_joined|date:"d M Y" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Tipe Akun</label>
+                        <span class="detail-val">
+                            {% if user.is_staff %}Admin{% else %}Employee{% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-item full">
+                        <label>Login Terakhir</label>
+                        <span class="detail-val">
+                            {{ user.last_login|date:"d M Y, H:i"|default:"—" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Nomor HP -->
+        <div class="phone-card">
+            <div class="phone-card-header">
+                <h3>📱 Nomor HP</h3>
+            </div>
+            <div class="phone-card-body">
+                <form method="post" action="{% url 'employee-update-phone' %}">
+                    {% csrf_token %}
+
+                    <div class="fg">
+                        <label>Nomor HP</label>
+                        <input type="tel"
+                               name="phone"
+                               value="{{ user.profile.phone|default:'' }}"
+                               placeholder="+62 8xx-xxxx-xxxx"
+                               maxlength="20">
+                        <span class="field-hint">
+                            Hanya nomor HP yang dapat diperbarui. Gunakan format: +62 8xx-xxxx-xxxx
+                        </span>
+                    </div>
+
+                    <button type="submit" class="btn-save">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Simpan Nomor HP
+                    </button>
+                </form>
+            </div>
+        </div>
+</script>
+{% endblock %}
