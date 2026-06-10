@@ -63,7 +63,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Capstone',
+        'NAME': 'Final_Capstone',
         'USER': 'postgres',
         'PASSWORD': '132005',
         'HOST': 'localhost',

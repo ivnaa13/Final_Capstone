@@ -1,11 +1,3 @@
-"""
-views.py  —  employee app
-Disesuaikan dengan base.html:
-  - URL names tanpa namespace prefix  (employee-dashboard, employee-checkin, dst.)
-  - Role check via request.user.profile.role  ('employee' | 'hrd')
-  - HRD/admin redirect ke 'hrd-dashboard'
-  - Semua nama fungsi disesuaikan dengan urls.py (tanpa suffix _view)
-"""
 import calendar
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -85,12 +77,16 @@ def dashboard(request):
     if _get_role(request.user) == 'hrd':
         return redirect('hrd-dashboard')
 
-    today              = timezone.localdate()
+    today = timezone.localdate()
+
     today_attendance   = Attendance.objects.filter(user=request.user, date=today).first()
     recent_attendances = Attendance.objects.filter(user=request.user).order_by('-date')[:5]
     this_month         = Attendance.objects.filter(
-        user=request.user, date__month=today.month, date__year=today.year)
-    recent_leaves      = Leave.objects.filter(user=request.user).order_by('-created_at')[:3]
+        user=request.user,
+        date__month=today.month,
+        date__year=today.year,
+    )
+    recent_leaves = Leave.objects.filter(user=request.user).order_by('-created_at')[:3]
 
     context = {
         'today':              today,
@@ -116,6 +112,13 @@ def checkin(request):
     now   = timezone.localtime()
     today_attendance = Attendance.objects.filter(user=request.user, date=today).first()
 
+    employee_obj = None
+    try:
+        profile_obj  = getattr(request.user, 'profile', None)
+        employee_obj = getattr(profile_obj, 'employee', None)
+    except Exception:
+        pass
+
     if request.method == 'POST':
         action    = request.POST.get('action', 'checkin')
         address   = request.POST.get('address', '')
@@ -130,16 +133,24 @@ def checkin(request):
             if today_attendance and today_attendance.check_in:
                 messages.warning(request, 'You have already checked in today.')
                 return redirect('employee-checkin')
+
             status = _determine_status(now)
             att = Attendance(
-                user=request.user, date=today, check_in=now,
-                check_in_lat=lat, check_in_lng=lng,
-                check_in_address=address, status=status)
+                user         = request.user,
+                employee     = employee_obj,
+                date         = today,
+                check_in     = now.time(),      
+                check_in_lat = lat,
+                check_in_lng = lng,
+                check_in_address = address,
+                status       = status,
+            )
             if photo_b64:
                 att.save_checkin_photo(photo_b64)
             att.save()
             messages.success(request,
-                f'✅ Check-in {"on time" if status == "present" else "late"} at {now.strftime("%H:%M")}')
+                f'✅ Check-in {"on time" if status == "present" else "late"} '
+                f'at {now.strftime("%H:%M")}')
 
         elif action == 'checkout':
             if not today_attendance or not today_attendance.check_in:
@@ -148,7 +159,8 @@ def checkin(request):
             if today_attendance.check_out:
                 messages.warning(request, 'You have already checked out today.')
                 return redirect('employee-checkin')
-            today_attendance.check_out         = now
+
+            today_attendance.check_out         = now.time()  
             today_attendance.check_out_lat     = lat
             today_attendance.check_out_lng     = lng
             today_attendance.check_out_address = address
@@ -156,17 +168,17 @@ def checkin(request):
                 today_attendance.save_checkout_photo(photo_b64)
             today_attendance.save()
             messages.success(request,
-                f'👋 Check-out at {now.strftime("%H:%M")} — Duration: {today_attendance.duration or "—"}')
+                f'👋 Check-out at {now.strftime("%H:%M")} '
+                f'— Duration: {today_attendance.duration or "—"}')
 
         return redirect('employee-checkin')
 
     today_attendance = Attendance.objects.filter(user=request.user, date=today).first()
-
     return render(request, 'employee/attandance_employee.html', {
         'today':            today,
-        'today_attendance': today_attendance, 
+        'today_attendance': today_attendance,
+        'employee':         employee_obj,
     })
-
 
 @login_required
 def attendance_history(request):
@@ -224,6 +236,24 @@ def attendance_history(request):
         'year_choices':    _year_choices(),
     })
 
+def _get_period_stats(user, month, year):
+    qs      = Attendance.objects.filter(user=user, date__month=month, date__year=year)
+    present = qs.filter(status='present').count()
+    late    = qs.filter(status='late').count()
+    absent  = qs.filter(status='absent').count()
+    leave   = qs.filter(status='leave').count()
+    total   = qs.count()
+    rate    = round((present + late) / total * 100) if total else 0
+    return {
+        'present': present,
+        'late':    late,
+        'absent':  absent,
+        'leave':   leave,
+        'total':   total,
+        'rate':    rate,
+    }
+
+
 @login_required
 def reports(request):
     if _get_role(request.user) == 'hrd':
@@ -238,30 +268,47 @@ def reports(request):
         selected_year  = today.year
 
     selected_month = max(1, min(12, selected_month))
+
+    qs = Attendance.objects.filter(
+        user=request.user,
+        date__month=selected_month,
+        date__year=selected_year,
+    ).order_by('date')
+
     stats = _get_period_stats(request.user, selected_month, selected_year)
 
     return render(request, 'employee/reports.html', {
         'stats':          stats,
+        'attendances':    qs,       
         'selected_month': selected_month,
         'selected_year':  selected_year,
         'current_year':   today.year,
+        'month_choices':  _month_choices(),  
         'year_choices':   _year_choices(),
+        'month_name':     calendar.month_name[selected_month],
     })
 
 
 @login_required
 def report_stats_api(request):
+    if _get_role(request.user) == 'hrd':
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
     today = timezone.localdate()
     try:
         month = int(request.GET.get('month', today.month))
         year  = int(request.GET.get('year',  today.year))
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid parameters'}, status=400)
+
     return JsonResponse(_get_period_stats(request.user, month, year))
 
 
 @login_required
 def report_pdf(request):
+    if _get_role(request.user) == 'hrd':
+        return redirect('hrd-dashboard')
+
     today = timezone.localdate()
     try:
         month = int(request.GET.get('month', today.month))
@@ -275,7 +322,8 @@ def report_pdf(request):
         import io
 
         qs         = Attendance.objects.filter(
-            user=request.user, date__month=month, date__year=year).order_by('date')
+            user=request.user, date__month=month, date__year=year
+        ).order_by('date')
         stats      = _get_period_stats(request.user, month, year)
         month_name = calendar.month_name[month]
         full_name  = request.user.get_full_name() or request.user.username
@@ -301,8 +349,10 @@ def report_pdf(request):
         c.setFont('Helvetica', 10)
         y -= 20
         for label, val in [
-            ('Present', stats['present']), ('Late', stats['late']),
-            ('Absent',  stats['absent']),  ('Permit', stats['leave']),
+            ('Present', stats['present']),
+            ('Late',    stats['late']),
+            ('Absent',  stats['absent']),
+            ('Permit',  stats['leave']),
             ('Rate',    f"{stats['rate']}%"),
         ]:
             c.drawString(50, y, f'{label}: {val}')
@@ -310,7 +360,10 @@ def report_pdf(request):
 
         y -= 16
         c.setFont('Helvetica-Bold', 9)
-        for txt, x in [('Date',55),('Day',120),('Check-In',160),('Check-Out',220),('Duration',280),('Status',360)]:
+        for txt, x in [
+            ('Date', 55), ('Day', 120), ('Check-In', 160),
+            ('Check-Out', 220), ('Duration', 280), ('Status', 360),
+        ]:
             c.drawString(x, y, txt)
         y -= 4
         c.line(40, y, W-40, y)
@@ -319,11 +372,17 @@ def report_pdf(request):
         for att in qs:
             y -= 16
             if y < 60:
-                c.showPage(); y = H-60; c.setFont('Helvetica', 9)
+                c.showPage()
+                y = H - 60
+                c.setFont('Helvetica', 9)
+
+            ci_str = timezone.localtime(att.check_in).strftime('%H:%M')  if att.check_in  else '—'
+            co_str = timezone.localtime(att.check_out).strftime('%H:%M') if att.check_out else '—'
+
             c.drawString(55,  y, att.date.strftime('%d-%m-%Y'))
             c.drawString(120, y, att.date.strftime('%a'))
-            c.drawString(160, y, att.check_in.strftime('%H:%M')  if att.check_in  else '—')
-            c.drawString(220, y, att.check_out.strftime('%H:%M') if att.check_out else '—')
+            c.drawString(160, y, ci_str)
+            c.drawString(220, y, co_str)
             c.drawString(280, y, att.duration or '—')
             c.drawString(360, y, att.get_status_display())
 
@@ -339,7 +398,6 @@ def report_pdf(request):
 
     except ImportError:
         return HttpResponse('pip install reportlab', content_type='text/plain', status=501)
-
 
 @login_required
 def payroll(request):
@@ -654,7 +712,6 @@ def update_phone(request):
     user_profile.phone = phone
     user_profile.save(update_fields=['phone'])
     messages.success(request, 'Nomor HP berhasil diperbarui.')
-    # FIX: was redirect('profile.html') — harus pakai URL name bukan nama template
     return redirect('employee-profile')
 
 from django.contrib.auth.models import User

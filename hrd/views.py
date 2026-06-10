@@ -1,28 +1,39 @@
 import json
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
+from decimal import Decimal
 from functools import wraps
-
+from collections import defaultdict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Case, When, IntegerField
+from django.db import transaction
+from django.db.models import Q, Count, Sum
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from employee.models import Attendance, Leave, Profile
+from employee.models import Attendance, Employee, Leave, Payroll, Profile
 
+OT_WEEKDAY_RATE  = Decimal('35000')   
+OT_DAYOFF_RATE   = Decimal('100000')   
 
-PAYROLL_CUTOFF_DAY = 25 
+NORMAL_WORK_MINUTES = 8 * 60          
+OVERTIME_THRESHOLD  = 10 * 60         
+DAYOFF_MIN_MINUTES  = 5 * 60         
 
+LATE_PENALTY_PER_MINUTE = Decimal('0')   
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Decorator
-# ─────────────────────────────────────────────────────────────────────────────
+VALID_PAYROLL_STATUSES = [
+    'Pending', 'Draft', 'Waiting Supervisor',
+    'Supervisor Approved', 'Supervisor Rejected',
+    'Approved', 'Reject', 'Done',
+]
+
+PAYROLL_CUTOFF_DAY = 20   
+
 
 def hrd_required(view_func):
-    """Pastikan user sudah login dan berperan sebagai HRD."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -33,21 +44,14 @@ def hrd_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper: hitung rentang periode payroll
-# Periode payroll: tgl (cutoff+1) bulan lalu s/d tgl cutoff bulan ini
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _payroll_range(year: int, month: int):
     """
     Kembalikan (start_date, end_date) untuk periode payroll bulan `month`/`year`.
-    Contoh cutoff=25:
-      - Periode Jan 2025 → 26 Des 2024 s/d 25 Jan 2025
+    Contoh PAYROLL_CUTOFF_DAY=20:
+      - Payroll Juni 2025 → 21 Mei 2025 s/d 20 Juni 2025
     """
-    end   = date(year, month, PAYROLL_CUTOFF_DAY)
+    end = date(year, month, PAYROLL_CUTOFF_DAY)
 
-    # Hitung bulan sebelumnya
     if month == 1:
         prev_year, prev_month = year - 1, 12
     else:
@@ -58,49 +62,28 @@ def _payroll_range(year: int, month: int):
 
 
 def _available_periods():
-    """
-    Kembalikan list dict periode yang tersedia (12 bulan ke belakang + bulan berjalan).
-    Di-filter hanya jika ada record Attendance pada rentang tersebut.
-    """
+    MONTH_ID = [
+        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ]
     today   = timezone.localdate()
     periods = []
 
-    for i in range(11, -1, -1):  # 11 bulan lalu → bulan ini
-        # Hitung tahun & bulan
-        total_months = today.month - i
-        if total_months <= 0:
+    for i in range(11, -1, -1):
+        raw_month = today.month - i
+        if raw_month <= 0:
             y = today.year - 1
-            m = total_months + 12
+            m = raw_month + 12
         else:
             y = today.year
-            m = total_months
+            m = raw_month
 
         start, end = _payroll_range(y, m)
-        is_complete = (today > end)   # periode sudah lewat cutoff
-
-        # Batas tampil: jika bulan berjalan, max s/d hari ini
-        display_end = end if is_complete else today
-
-        # Cek ada data atau tidak
-        has_data = Attendance.objects.filter(
-            date__range=(start, display_end)
-        ).exists()
-
-        if not has_data:
-            continue   # skip bulan tanpa data
-
-        label = date(y, m, 1).strftime('%-d %B %Y')   # Linux
-        # Windows: '%#d %B %Y'
-        # Atau pakai cara manual:
-        MONTH_ID = ['', 'Januari','Februari','Maret','April','Mei','Juni',
-                    'Juli','Agustus','September','Oktober','November','Desember']
-        label = f"{MONTH_ID[m]} {y}"
-
         periods.append({
             'year':          y,
             'month':         m,
-            'label':         label,
-            'is_complete':   is_complete,
+            'label':         f"{MONTH_ID[m]} {y}",
+            'is_complete':   today > end,
             'payroll_start': start.strftime('%d %b'),
             'payroll_end':   end.strftime('%d %b %Y'),
             'selected':      (y == today.year and m == today.month),
@@ -109,9 +92,131 @@ def _available_periods():
     return periods
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper: manage employee
-# ─────────────────────────────────────────────────────────────────────────────
+def _duration_minutes(check_in, check_out) -> int:
+    """Hitung selisih menit antara dua DateTimeField atau TimeField."""
+    import datetime as dt_module
+
+    if isinstance(check_in, dt_module.datetime) and isinstance(check_out, dt_module.datetime):
+        total = int((check_out - check_in).total_seconds() / 60)
+        return max(0, total)
+
+    dummy = date(2000, 1, 1)
+    ci    = datetime.combine(dummy, check_in)
+    co    = datetime.combine(dummy, check_out)
+    total = int((co - ci).total_seconds() / 60)
+    return max(0, total)
+
+
+def _is_dayoff(check_date: date) -> bool:
+    """
+    Deteksi apakah tanggal adalah hari libur/weekend.
+    Saat ini cek sederhana: Sabtu=5, Minggu=6.
+    Extend logic ini untuk menambahkan libur nasional / cuti bersama.
+    """
+    return check_date.weekday() >= 5   
+
+
+def _calc_attendance_summary(employee_pk: int, start_date: date, end_date: date) -> dict:
+    """
+    Rekap absensi satu karyawan dalam periode cut-off.
+    Return dict berisi semua komponen yang dibutuhkan untuk payroll.
+    """
+    records = Attendance.objects.filter(
+        employee_id=employee_pk,
+        date__range=(start_date, end_date),
+    )
+
+    total_days    = (end_date - start_date).days + 1
+    weekday_count = sum(
+        1 for d in (start_date + timedelta(n) for n in range(total_days))
+        if d.weekday() < 5
+    )
+
+    present_days    = 0
+    late_count      = 0
+    total_late_min  = 0
+    ot_weekday_sess = 0
+    ot_dayoff_sess  = 0
+
+    for rec in records:
+        status = (rec.status or '').lower()
+
+        if _is_dayoff(rec.date):
+
+            if rec.check_in and rec.check_out:
+                dur = _duration_minutes(rec.check_in, rec.check_out)
+                if dur >= DAYOFF_MIN_MINUTES:
+                    ot_dayoff_sess += 1
+        else:
+            if status in ('present', 'late', 'overtime'):
+                present_days += 1
+
+            if status == 'late':
+                late_count += 1
+                if rec.check_in:
+                    from django.utils import timezone as tz
+                    ci_local = tz.localtime(rec.check_in) if tz.is_aware(rec.check_in) else rec.check_in
+                    work_start = ci_local.replace(hour=8, minute=0, second=0, microsecond=0)
+                    late_min   = max(0, int((ci_local - work_start).total_seconds() / 60))
+                    total_late_min += late_min
+
+            if rec.check_in and rec.check_out:
+                dur = _duration_minutes(rec.check_in, rec.check_out)
+                if dur > OVERTIME_THRESHOLD:
+                    ot_weekday_sess += 1
+
+    absent_days = max(0, weekday_count - present_days)
+
+    return {
+        'working_days':        weekday_count,
+        'present_days':        present_days,
+        'absent_days':         absent_days,
+        'late_count':          late_count,
+        'total_late_minutes':  total_late_min,
+        'ot_weekday_sessions': ot_weekday_sess,
+        'ot_dayoff_sessions':  ot_dayoff_sess,
+    }
+
+
+def _calc_payroll_components(employee: Employee, summary: dict) -> dict:
+    """
+    Hitung semua komponen gaji berdasarkan summary absensi.
+
+    Returns:
+        basic_salary, overtime_pay, allowance, deduction,
+        late_penalty, gross_salary, net_salary
+    """
+    basic_salary = Decimal(str(employee.salary or 0))
+
+    ot_weekday_pay = Decimal(summary['ot_weekday_sessions']) * OT_WEEKDAY_RATE
+    ot_dayoff_pay  = Decimal(summary['ot_dayoff_sessions'])  * OT_DAYOFF_RATE
+    overtime_pay   = ot_weekday_pay + ot_dayoff_pay
+
+    allowance = Decimal('0')
+
+    working_days = summary['working_days'] or 1
+    absent_days  = summary['absent_days']
+    if absent_days > 0 and basic_salary > 0:
+        daily_rate = basic_salary / working_days
+        deduction  = daily_rate * absent_days
+    else:
+        deduction = Decimal('0')
+
+    late_penalty = Decimal(summary['total_late_minutes']) * LATE_PENALTY_PER_MINUTE
+
+    gross_salary = basic_salary + overtime_pay + allowance
+    net_salary   = gross_salary - deduction - late_penalty
+
+    return {
+        'basic_salary':  basic_salary.quantize(Decimal('0.01')),
+        'overtime_pay':  overtime_pay.quantize(Decimal('0.01')),
+        'allowance':     allowance.quantize(Decimal('0.01')),
+        'deduction':     deduction.quantize(Decimal('0.01')),
+        'late_penalty':  late_penalty.quantize(Decimal('0.01')),
+        'gross_salary':  gross_salary.quantize(Decimal('0.01')),
+        'net_salary':    net_salary.quantize(Decimal('0.01')),
+    }
+
 
 AVATAR_COLORS = [
     '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
@@ -125,18 +230,11 @@ def _get_avatar_color(pk: int) -> str:
 
 
 def _get_initials(user) -> str:
-    """Return up to 2 initials from full name or username."""
     initials = ''.join(p[0].upper() for p in [user.first_name, user.last_name] if p)
     return initials or user.username[:2].upper()
 
 
 def _get_login_status(user) -> str:
-    """
-    Derive login status:
-      - 'Never'      → user belum pernah login
-      - 'Successful' → last_login ada dan akun aktif
-      - 'Failed'     → akun tidak aktif tapi last_login ada (terkunci)
-    """
     if not user.last_login:
         return 'Never'
     if user.is_active:
@@ -144,9 +242,11 @@ def _get_login_status(user) -> str:
     return 'Failed'
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dashboard
-# ─────────────────────────────────────────────────────────────────────────────
+def _fmt_rupiah(val) -> str:
+    if val is None:
+        return 'Rp 0'
+    return 'Rp {:,.0f}'.format(float(val)).replace(',', '.')
+
 
 @login_required
 @hrd_required
@@ -158,11 +258,30 @@ def dashboard(request):
     pending_leaves  = Leave.objects.filter(status='pending').count()
     late_today      = Attendance.objects.filter(date=today, status='late').count()
 
+    bar_labels, bar_present, bar_late = [], [], []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        qs = Attendance.objects.filter(date=d)
+        bar_labels.append(d.strftime('%d/%m'))
+        bar_present.append(qs.filter(status='present').count())
+        bar_late.append(qs.filter(status='late').count())
+
+    month_start = today.replace(day=1)
+    dept_qs = (
+        Attendance.objects
+        .filter(date__gte=month_start, date__lte=today)
+        .values('employee__organization')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+    pie_labels = [d['employee__organization'] or 'Unknown' for d in dept_qs]
+    pie_values = [d['total'] for d in dept_qs]
+
     recent_attendance = (
         Attendance.objects
         .filter(date__lte=today)
-        .select_related('user')
-        .order_by('-date', 'user__first_name')[:50]
+        .select_related('employee')
+        .order_by('-date', 'employee__full_name')[:50]
     )
 
     return render(request, 'hrd/dashboard.html', {
@@ -171,28 +290,22 @@ def dashboard(request):
         'pending_leaves':    pending_leaves,
         'late_today':        late_today,
         'today':             today,
+        'today_str':         today.strftime('%d %B %Y'),
         'recent_attendance': recent_attendance,
+        'bar_labels':        bar_labels,
+        'bar_present':       bar_present,
+        'bar_late':          bar_late,
+        'pie_labels':        pie_labels,
+        'pie_values':        pie_values,
     })
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Manage Employee
-# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 @hrd_required
 def employees(request):
-    """
-    Daftar karyawan dengan filter:
-      - q           : nama / employee_code / email
-      - department  : nama departemen
-      - status      : active / inactive
-      - login       : successful / failed / never
-    """
-    search_query    = request.GET.get('q',          '').strip()
-    department      = request.GET.get('department', '').strip()
-    status_filter   = request.GET.get('status',     '').strip()
-    login_filter    = request.GET.get('login',      '').strip()
+    search_query  = request.GET.get('q',          '').strip()
+    department    = request.GET.get('department', '').strip()
+    status_filter = request.GET.get('status',     '').strip()
+    login_filter  = request.GET.get('login',      '').strip()
 
     emp_list = Profile.objects.filter(role='employee').select_related('user')
 
@@ -214,7 +327,6 @@ def employees(request):
     elif status_filter == 'inactive':
         emp_list = emp_list.filter(user__is_active=False)
 
-    # Build enriched employee list (+ login_filter diterapkan di sini)
     employees_data = []
     for profile in emp_list:
         u            = profile.user
@@ -235,13 +347,11 @@ def employees(request):
             'initials':      _get_initials(u),
         })
 
-    # Stats dari SEMUA employee (tidak terpengaruh filter)
-    all_profiles     = Profile.objects.filter(role='employee')
-    total_employees  = all_profiles.count()
-    active_count     = all_profiles.filter(user__is_active=True).count()
-    inactive_count   = all_profiles.filter(user__is_active=False).count()
+    all_profiles    = Profile.objects.filter(role='employee')
+    total_employees = all_profiles.count()
+    active_count    = all_profiles.filter(user__is_active=True).count()
+    inactive_count  = all_profiles.filter(user__is_active=False).count()
 
-    # Daftar departemen unik untuk dropdown
     departments = (
         all_profiles
         .values_list('department', flat=True)
@@ -256,7 +366,6 @@ def employees(request):
         'active_count':      active_count,
         'inactive_count':    inactive_count,
         'departments':       departments,
-        # Retain filter state
         'query':             search_query,
         'department_filter': department,
         'status_filter':     status_filter,
@@ -369,7 +478,6 @@ def toggle_employee_active(request, user_id):
         messages.error(request, "Kamu tidak dapat menonaktifkan akun sendiri.")
         return redirect('hrd-employees')
 
-    # Support parameter action eksplisit (activate/deactivate) atau toggle biasa
     action = request.POST.get('action', '').strip()
     if action == 'activate':
         employee.is_active = True
@@ -384,25 +492,15 @@ def toggle_employee_active(request, user_id):
     return redirect('hrd-employees')
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Attendance — halaman utama (render template)
-# ─────────────────────────────────────────────────────────────────────────────
-
 @login_required
 @hrd_required
 def attendance(request):
-    """
-    Render halaman hrd_attendance.html.
-    Data tabel dimuat via AJAX ke attendance_api() di bawah.
-    Template hanya butuh `available_periods` untuk mengisi <select>.
-    """
     available_periods = _available_periods()
 
-    # Pastikan selalu ada minimal 1 opsi walau belum ada data absensi
     today = timezone.localdate()
     if not available_periods:
-        MONTH_ID = ['', 'Januari','Februari','Maret','April','Mei','Juni',
-                    'Juli','Agustus','September','Oktober','November','Desember']
+        MONTH_ID = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
         start, end = _payroll_range(today.year, today.month)
         available_periods = [{
             'year':          today.year,
@@ -419,39 +517,12 @@ def attendance(request):
     })
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Attendance — API endpoint (AJAX JSON)
-# GET /api/hrd/attendance/
-# ─────────────────────────────────────────────────────────────────────────────
-
 @login_required
 @hrd_required
 def attendance_api(request):
-    """
-    Mengembalikan JSON data absensi untuk periode tertentu.
-
-    Query params:
-      year        int  — tahun (wajib)
-      month       int  — bulan 1-based (wajib)
-      search      str  — nama / employee_code
-      department  str  — nama departemen
-      status      str  — Present | Late | Overtime
-      flag        str  — invalid | late | missing_co | missing_photo
-      page        int  — halaman (default 1)
-      per_page    int  — jumlah per halaman (default 10, max 100)
-
-    Response JSON:
-    {
-      "records":    [ {...}, ... ],
-      "stats":      { "invalid_location": n, "excessive_late": n,
-                      "missing_clock_out": n, "missing_photo": n },
-      "pagination": { "total": n, "page": n, "per_page": n, "total_pages": n }
-    }
-    """
     if request.method != 'GET':
         return JsonResponse({'error': 'Method tidak diizinkan.'}, status=405)
 
-    # ── Parse & validasi parameter ───────────────────────────────────────────
     try:
         year     = int(request.GET.get('year',  0))
         month    = int(request.GET.get('month', 0))
@@ -469,108 +540,89 @@ def attendance_api(request):
     status_f   = request.GET.get('status',     '').strip()
     flag       = request.GET.get('flag',       '').strip()
 
-    # ── Rentang tanggal periode payroll ─────────────────────────────────────
     start_date, end_date = _payroll_range(year, month)
-
-    # Jika periode masih berjalan, batasi s/d hari ini
     if end_date > today:
         end_date = today
 
-    # ── Base queryset ────────────────────────────────────────────────────────
     qs = (
         Attendance.objects
         .filter(date__range=(start_date, end_date))
-        .select_related('user', 'user__profile')
-        .order_by('-date', 'user__first_name')
+        .select_related('employee')
+        .order_by('-date', 'employee__full_name')
     )
 
-    # ── Filter: search (nama / employee_code) ────────────────────────────────
     if search:
         qs = qs.filter(
-            Q(user__first_name__icontains=search) |
-            Q(user__last_name__icontains=search)  |
-            Q(user__profile__employee_code__icontains=search)
+            Q(employee__full_name__icontains=search) |
+            Q(employee__employee_id__icontains=search)
         )
 
-    # ── Filter: departemen ───────────────────────────────────────────────────
     if department:
-        qs = qs.filter(user__profile__department__iexact=department)
+        qs = qs.filter(employee__organization__iexact=department)
 
-    # ── Filter: status absensi ───────────────────────────────────────────────
-    # Model menyimpan lowercase (present/late/overtime), HTML kirim Title Case
-    STATUS_MAP = {
-        'Present': 'present',
-        'Late':    'late',
-        'Overtime':'overtime',
-    }
+    STATUS_MAP = {'Present': 'present', 'Late': 'late', 'Overtime': 'overtime'}
     if status_f and status_f in STATUS_MAP:
-        qs = qs.filter(status=STATUS_MAP[status_f])
+        qs = qs.filter(status__iexact=STATUS_MAP[status_f])
 
-    # ── Filter: flag dari stat card ──────────────────────────────────────────
-    if flag == 'invalid':
-        qs = qs.filter(is_valid_location=False)
-    elif flag == 'late':
-        qs = qs.filter(status='late')
+    if flag == 'late':
+        qs = qs.filter(status__iexact='late')
     elif flag == 'missing_co':
-        qs = qs.filter(clock_out__isnull=True)
-    elif flag == 'missing_photo':
-        qs = qs.filter(Q(photo__isnull=True) | Q(photo=''))
+        qs = qs.filter(check_out__isnull=True)
 
-    # ── Stats (selalu dihitung dari full periode tanpa flag/search) ──────────
     qs_full = Attendance.objects.filter(date__range=(start_date, end_date))
     stats = {
-        'invalid_location':  qs_full.filter(is_valid_location=False).count(),
-        'excessive_late':    qs_full.filter(status='late').count(),
-        'missing_clock_out': qs_full.filter(clock_out__isnull=True).count(),
-        'missing_photo':     qs_full.filter(Q(photo__isnull=True) | Q(photo='')).count(),
+        'invalid_location':  0,
+        'excessive_late':    qs_full.filter(status__iexact='late').count(),
+        'missing_clock_out': qs_full.filter(check_out__isnull=True).count(),
+        'missing_photo':     0,
     }
 
-    # ── Pagination ───────────────────────────────────────────────────────────
-    paginator   = Paginator(qs, per_page)
-    page_obj    = paginator.get_page(page)
+    paginator = Paginator(qs, per_page)
+    page_obj  = paginator.get_page(page)
 
-    # ── Serialize records ────────────────────────────────────────────────────
+    STATUS_DISPLAY = {
+        'present':  'Present',
+        'late':     'Late',
+        'overtime': 'Overtime',
+        'absent':   'Absent',
+        'leave':    'Leave',
+    }
+
     records = []
     for rec in page_obj.object_list:
-        profile = getattr(rec.user, 'profile', None)
+        emp = rec.employee
 
-        # Resolve URL foto (field ImageField di model → .url)
-        photo_url = None
-        if rec.photo:
-            try:
-                photo_url = request.build_absolute_uri(rec.photo.url)
-            except Exception:
-                photo_url = None
+        full_name    = emp.full_name    if emp else '(no employee)'
+        emp_code     = emp.employee_id  if emp else ''
+        emp_division = emp.organization if emp else ''
+        emp_npwp     = emp.npwp         if emp else ''
 
-        # Status: simpan di DB lowercase, kirim Title Case ke frontend
-        STATUS_DISPLAY = {
-            'present': 'Present',
-            'late':    'Late',
-            'overtime':'Overtime',
-            'absent':  'Absent',
-        }
+        clock_in_str  = rec.check_in.strftime('%H:%M')  if rec.check_in  else '—'
+        clock_out_str = rec.check_out.strftime('%H:%M') if rec.check_out else None
+
+        raw_status     = (rec.status or 'present').lower().strip()
+        display_status = STATUS_DISPLAY.get(raw_status, rec.status.title() if rec.status else 'Present')
 
         records.append({
             'id':                rec.pk,
-            'employee_code':     getattr(profile, 'employee_code', '') or '',
-            'employee_name':     rec.user.get_full_name() or rec.user.username,
-            'employee_division': getattr(profile, 'department', '') or '',
-            'employee_npwp':     getattr(profile, 'npwp', '') or '',
+            'employee_code':     emp_code,
+            'employee_name':     full_name,
+            'employee_division': emp_division,
+            'employee_npwp':     emp_npwp,
             'date':              rec.date.isoformat(),
-            # clock_in / clock_out: bisa TimeField atau CharField di model
-            'clock_in':          str(rec.clock_in)[:5]  if rec.clock_in  else '—',
-            'clock_out':         str(rec.clock_out)[:5] if rec.clock_out else None,
-            'photo_url':         photo_url,
-            'latitude':          str(rec.latitude)  if getattr(rec, 'latitude',  None) else '—',
-            'longitude':         str(rec.longitude) if getattr(rec, 'longitude', None) else '—',
-            'status':            STATUS_DISPLAY.get(rec.status, rec.status.title()),
-            'is_valid_location': getattr(rec, 'is_valid_location', True),
-            'delay_minutes':     getattr(rec, 'delay_minutes', 0) or 0,
+            'clock_in':          clock_in_str,
+            'clock_out':         clock_out_str,
+            'photo_url':         None,
+            'latitude':          '—',
+            'longitude':         '—',
+            'status':            display_status,
+            'is_valid_location': True,
+            'delay_minutes':     0,
         })
 
     return JsonResponse({
-        'records': records,
-        'stats':   stats,
+        'records':    records,
+        'stats':      stats,
         'pagination': {
             'total':       paginator.count,
             'page':        page_obj.number,
@@ -580,18 +632,9 @@ def attendance_api(request):
     })
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Attendance — Export CSV
-# GET /api/hrd/attendance/export/
-# ─────────────────────────────────────────────────────────────────────────────
-
 @login_required
 @hrd_required
 def attendance_export(request):
-    """
-    Kembalikan CSV seluruh data absensi untuk periode & filter tertentu.
-    Tidak ada pagination — semua record dikembalikan sekaligus.
-    """
     try:
         year  = int(request.GET.get('year',  0))
         month = int(request.GET.get('month', 0))
@@ -614,110 +657,112 @@ def attendance_export(request):
     qs = (
         Attendance.objects
         .filter(date__range=(start_date, end_date))
-        .select_related('user', 'user__profile')
-        .order_by('-date', 'user__first_name')
+        .select_related('employee')
+        .order_by('-date', 'employee__full_name')
     )
 
     if search:
         qs = qs.filter(
-            Q(user__first_name__icontains=search) |
-            Q(user__last_name__icontains=search)  |
-            Q(user__profile__employee_code__icontains=search)
+            Q(employee__full_name__icontains=search) |
+            Q(employee__employee_id__icontains=search)
         )
     if department:
-        qs = qs.filter(user__profile__department__iexact=department)
+        qs = qs.filter(employee__organization__iexact=department)
 
     STATUS_MAP = {'Present': 'present', 'Late': 'late', 'Overtime': 'overtime'}
     if status_f and status_f in STATUS_MAP:
-        qs = qs.filter(status=STATUS_MAP[status_f])
+        qs = qs.filter(status__iexact=STATUS_MAP[status_f])
 
-    if flag == 'invalid':
-        qs = qs.filter(is_valid_location=False)
-    elif flag == 'late':
-        qs = qs.filter(status='late')
+    if flag == 'late':
+        qs = qs.filter(status__iexact='late')
     elif flag == 'missing_co':
-        qs = qs.filter(clock_out__isnull=True)
-    elif flag == 'missing_photo':
-        qs = qs.filter(Q(photo__isnull=True) | Q(photo=''))
+        qs = qs.filter(check_out__isnull=True)
 
-    MONTH_ID = ['','Januari','Februari','Maret','April','Mei','Juni',
-                'Juli','Agustus','September','Oktober','November','Desember']
+    MONTH_ID = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
     filename = f"Attendance_{MONTH_ID[month]}_{year}.csv"
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    response.write('\ufeff')   # BOM agar Excel terbaca UTF-8
-
-    # Header CSV
+    response.write('\ufeff')
     response.write(
         'ID,Kode Karyawan,Nama,Divisi,NPWP,'
-        'Tanggal,Clock In,Clock Out,Status,Delay (menit),'
-        'Latitude,Longitude,Valid Lokasi,Ada Foto\n'
+        'Tanggal,Clock In,Clock Out,Status,Working Hours\n'
     )
 
     for rec in qs:
-        profile  = getattr(rec.user, 'profile', None)
-        has_photo = bool(getattr(rec, 'photo', None))
-        row = (
-            f'{rec.pk},'
-            f'{getattr(profile, "employee_code", "") or ""},'
-            f'"{rec.user.get_full_name()}",'
-            f'"{getattr(profile, "department", "") or ""}",'
-            f'{getattr(profile, "npwp", "") or ""},'
-            f'{rec.date.isoformat()},'
-            f'{str(rec.clock_in)[:5] if rec.clock_in else ""},'
-            f'{str(rec.clock_out)[:5] if rec.clock_out else ""},'
-            f'{rec.status},'
-            f'{getattr(rec, "delay_minutes", 0) or 0},'
-            f'{getattr(rec, "latitude",  "") or ""},'
-            f'{getattr(rec, "longitude", "") or ""},'
-            f'{"Ya" if getattr(rec, "is_valid_location", True) else "Tidak"},'
-            f'{"Ya" if has_photo else "Tidak"}\n'
+        emp          = rec.employee
+        full_name    = emp.full_name    if emp else ''
+        emp_code     = emp.employee_id  if emp else ''
+        emp_division = emp.organization if emp else ''
+        emp_npwp     = emp.npwp         if emp else ''
+        cin_str      = rec.check_in.strftime('%H:%M')  if rec.check_in  else ''
+        cout_str     = rec.check_out.strftime('%H:%M') if rec.check_out else ''
+
+        response.write(
+            f'{rec.pk},{emp_code},"{full_name}","{emp_division}",'
+            f'{emp_npwp},{rec.date.isoformat()},{cin_str},{cout_str},'
+            f'{rec.status or ""},{rec.working_hours or ""}\n'
         )
-        response.write(row)
 
     return response
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Attendance — Detail record
-# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 @hrd_required
 def attendance_detail(request, record_id):
     rec     = get_object_or_404(Attendance, pk=record_id)
-    profile = getattr(rec.user, 'profile', None)
 
     if request.method == 'POST':
         action = request.POST.get('action')
-
         if action == 'save_notes':
-            rec.hrd_notes = request.POST.get('hrd_notes', '')
-            rec.save(update_fields=['hrd_notes'])
-
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'ok': True})
+        elif action in ('approve', 'reject'):
+            messages.success(request, f"Absensi diperbarui.")
 
-        elif action == 'approve':
-            rec.approval_status = 'approve'
-            rec.save(update_fields=['approval_status'])
-            messages.success(request, f"Absensi {rec.user.get_full_name()} berhasil disetujui.")
+    emp = rec.employee
 
-        elif action == 'reject':
-            rec.approval_status = 'reject'
-            rec.save(update_fields=['approval_status'])
-            messages.warning(request, f"Absensi {rec.user.get_full_name()} ditolak.")
+    full_name    = emp.full_name    if emp else '—'
+    emp_code     = emp.employee_id  if emp else '—'
+    emp_division = emp.organization if emp else '—'
+    emp_position = emp.job_position if emp else '—'
+    emp_npwp     = emp.npwp         if emp else '—'
+
+    clock_in_str  = rec.check_in.strftime('%H:%M')  if rec.check_in  else '—'
+    clock_out_str = rec.check_out.strftime('%H:%M') if rec.check_out else None
+
+    STATUS_DISPLAY = {
+        'present':  'Present', 'late': 'Late', 'overtime': 'Overtime',
+        'absent':   'Absent',  'leave': 'Leave',
+    }
 
     return render(request, 'hrd/attandance_detail.html', {
-        'rec':     rec,
-        'profile': profile,
+        'record': {
+            'id':                  rec.pk,
+            'date':                rec.date,
+            'status':              STATUS_DISPLAY.get((rec.status or '').lower(), 'Present'),
+            'clock_in':            clock_in_str,
+            'clock_out':           clock_out_str,
+            'delay_minutes':       0,
+            'latitude':            '—',
+            'longitude':           '—',
+            'is_valid_location':   True,
+            'photo_url':           None,
+            'hrd_notes':           '',
+            'notes':               '',
+            'attachment':          None,
+            'approval_status':     'pending',
+            'employee_name':       full_name,
+            'employee_code':       emp_code,
+            'employee_email':      '—',
+            'employee_phone':      '—',
+            'employee_npwp':       emp_npwp,
+            'employee_division':   emp_division,
+            'employee_position':   emp_position,
+        },
+        'rec': rec,
     })
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Leave Approval
-# ─────────────────────────────────────────────────────────────────────────────
 
 VALID_LEAVE_STATUSES = ('pending', 'approved', 'rejected', 'cancelled')
 
@@ -777,11 +822,6 @@ def reject_leave(request, leave_id):
     messages.success(request, f"Permintaan cuti {leave.user.get_full_name()} ditolak.")
     return redirect('hrd-leave')
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Payroll
-# ─────────────────────────────────────────────────────────────────────────────
-
 @login_required
 @hrd_required
 def payroll(request):
@@ -801,12 +841,12 @@ def payroll(request):
         'payroll_list': [], 'month': month, 'year': year, 'today': today,
     })
 
-
 @login_required
 @hrd_required
 def generate_payroll(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method tidak diizinkan.'}, status=405)
+
     try:
         body  = json.loads(request.body)
         month = int(body.get('month', 0))
@@ -816,22 +856,130 @@ def generate_payroll(request):
 
     if not (1 <= month <= 12):
         return JsonResponse({'error': 'Bulan tidak valid (1–12).'}, status=400)
+
     today = timezone.localdate()
     if not (2000 <= year <= today.year + 1):
         return JsonResponse({'error': f'Tahun tidak valid (2000–{today.year + 1}).'}, status=400)
 
-    return JsonResponse({
-        'success': True, 'month': month, 'year': year,
-        'payroll_list': [],
-        'message': f'Payroll periode {month}/{year} berhasil dimuat.',
-    })
+    start_date, end_date = _payroll_range(year, month)
 
+    effective_end = min(end_date, today)
+
+    employee_ids = (
+        Attendance.objects
+        .filter(date__range=(start_date, effective_end))
+        .values_list('employee_id', flat=True)
+        .distinct()
+    )
+
+    if not employee_ids:
+        return JsonResponse({
+            'success':   True,
+            'month':     month,
+            'year':      year,
+            'period_id': None,
+            'employees': [],
+            'message':   f'Tidak ada data absensi untuk periode {start_date} s/d {effective_end}.',
+        })
+
+    employees_qs = Employee.objects.filter(pk__in=employee_ids)
+
+    existing_payrolls = {
+        p.employee_id: p
+        for p in Payroll.objects.filter(
+            employee_id__in=employee_ids,
+            period_start=start_date,
+            period_end=end_date,
+        )
+    }
+
+    result_list = []
+    now = timezone.now()
+
+    with transaction.atomic():
+        for emp in employees_qs:
+            summary    = _calc_attendance_summary(emp.pk, start_date, effective_end)
+            components = _calc_payroll_components(emp, summary)
+
+            if emp.pk in existing_payrolls:
+                pr = existing_payrolls[emp.pk]
+                pr.basic_salary  = components['basic_salary']
+                pr.overtime_pay  = components['overtime_pay']
+                pr.allowance     = components['allowance']
+                pr.deduction     = components['deduction']
+                pr.late_penalty  = components['late_penalty']
+                pr.gross_salary  = components['gross_salary']
+                pr.net_salary    = components['net_salary']
+                pr.updated_at    = now
+                pr.save(update_fields=[
+                    'basic_salary', 'overtime_pay', 'allowance',
+                    'deduction', 'late_penalty', 'gross_salary',
+                    'net_salary', 'updated_at',
+                ])
+            else:
+                pr = Payroll(
+                    employee_id  = emp.pk,
+                    period_start = start_date,
+                    period_end   = end_date,
+                    status       = 'Pending',
+                    created_at   = now,
+                    updated_at   = now,
+                    **components,
+                )
+                pr.save()
+
+            ot_weekday_amount = int(summary['ot_weekday_sessions']) * int(OT_WEEKDAY_RATE)
+            ot_dayoff_amount  = int(summary['ot_dayoff_sessions'])  * int(OT_DAYOFF_RATE)
+
+            result_list.append({
+                'payroll_id':   pr.pk,
+                'employee_pk':  emp.pk,
+                'employee_id':  emp.employee_id,
+                'name':         emp.full_name,
+                'department':   emp.organization or '',
+                'position':     emp.job_position or '',
+                'npwp':         emp.npwp or '',
+
+                'working_days': summary['working_days'],
+                'present_days': summary['present_days'],
+                'absent_days':  summary['absent_days'],
+                'late_count':   summary['late_count'],
+
+                'ot_weekday_sessions': summary['ot_weekday_sessions'],
+                'ot_dayoff_sessions':  summary['ot_dayoff_sessions'],
+                'ot_weekday_amount':   ot_weekday_amount,
+                'ot_dayoff_amount':    ot_dayoff_amount,
+                'overtime_amount':     int(components['overtime_pay']),
+
+                'base_salary':      int(components['basic_salary']),
+                'salary':           int(components['basic_salary']),
+                'salary_formatted': _fmt_rupiah(components['basic_salary']),
+                'allowance':        int(components['allowance']),
+                'deduction':        int(components['deduction']),
+                'late_penalty':     int(components['late_penalty']),
+                'gross_salary':     int(components['gross_salary']),
+                'net_salary':       int(components['net_salary']),
+
+                'payroll_status': pr.status,
+            })
+
+    return JsonResponse({
+        'success':    True,
+        'month':      month,
+        'year':       year,
+        'period_id':  None,
+        'period_start': start_date.isoformat(),
+        'period_end':   end_date.isoformat(),
+        'employees':  result_list,
+        'message':    f'{len(result_list)} record payroll dimuat — periode {start_date} s/d {end_date}.',
+    })
 
 @login_required
 @hrd_required
 def update_payroll_status(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method tidak diizinkan.'}, status=405)
+
     try:
         body        = json.loads(request.body)
         payroll_ids = body.get('payroll_ids', [])
@@ -843,30 +991,69 @@ def update_payroll_status(request):
         return JsonResponse({'error': 'payroll_ids tidak boleh kosong.'}, status=400)
     if not isinstance(payroll_ids, list):
         return JsonResponse({'error': 'payroll_ids harus berupa array.'}, status=400)
-
-    valid_statuses = ['pending', 'approved', 'paid', 'rejected']
-    if status not in valid_statuses:
+    if status not in VALID_PAYROLL_STATUSES:
         return JsonResponse(
-            {'error': f'Status tidak valid. Pilihan: {", ".join(valid_statuses)}.'}, status=400
+            {'error': f'Status tidak valid. Pilihan: {", ".join(VALID_PAYROLL_STATUSES)}.'}, status=400
         )
-    updated = len(payroll_ids)
+
+    now     = timezone.now()
+    updated = Payroll.objects.filter(pk__in=payroll_ids).update(
+        status=status, updated_at=now
+    )
+
     return JsonResponse({
-        'success': True, 'updated': updated, 'status': status,
+        'success': True,
+        'updated': updated,
+        'status':  status,
         'message': f'{updated} data payroll berhasil diupdate ke status "{status}".',
     })
-
 
 @login_required
 @hrd_required
 def payroll_detail(request, payroll_id):
     if request.method != 'GET':
         return JsonResponse({'error': 'Method tidak diizinkan.'}, status=405)
-    if payroll_id <= 0:
-        return JsonResponse({'error': 'Payroll tidak ditemukan.'}, status=404)
+
+    pr = get_object_or_404(Payroll, pk=payroll_id)
+    emp = pr.employee
+
+    if not emp:
+        return JsonResponse({'error': 'Data employee tidak ditemukan.'}, status=404)
+
+    summary = _calc_attendance_summary(emp.pk, pr.period_start, pr.period_end)
+
+    ot_weekday_amount = int(summary['ot_weekday_sessions']) * int(OT_WEEKDAY_RATE)
+    ot_dayoff_amount  = int(summary['ot_dayoff_sessions'])  * int(OT_DAYOFF_RATE)
+
     return JsonResponse({
-        'id': payroll_id, 'name': 'Data Belum Tersedia',
-        'username': '-', 'email': '-', 'department': '-', 'phone': '-',
-        'month': '-', 'year': '-', 'basic_salary': '0', 'allowance': '0',
-        'deduction': '0', 'net_salary': '0', 'payroll_status': 'Pending',
-        'paid_at': None, 'message': 'Model Payroll belum dikonfigurasi.',
+        'payroll_id':    pr.pk,
+        'employee_pk':   emp.pk,
+        'name':          emp.full_name,
+        'department':    emp.organization or '',
+        'position':      emp.job_position or '',
+        'npwp':          emp.npwp or '',
+
+        'working_days':  summary['working_days'],
+        'present_days':  summary['present_days'],
+        'absent_days':   summary['absent_days'],
+        'late_count':    summary['late_count'],
+
+        'ot_weekday_sessions': summary['ot_weekday_sessions'],
+        'ot_dayoff_sessions':  summary['ot_dayoff_sessions'],
+        'ot_weekday_amount':   ot_weekday_amount,
+        'ot_dayoff_amount':    ot_dayoff_amount,
+        'overtime_amount':     int(pr.overtime_pay),
+
+        'base_salary':      int(pr.basic_salary),
+        'salary':           int(pr.basic_salary),
+        'salary_formatted': _fmt_rupiah(pr.basic_salary),
+        'allowance':        int(pr.allowance),
+        'deduction':        int(pr.deduction),
+        'late_penalty':     int(pr.late_penalty),
+        'gross_salary':     int(pr.gross_salary),
+        'net_salary':       int(pr.net_salary),
+
+        'payroll_status':   pr.status,
+        'period_start':     pr.period_start.isoformat(),
+        'period_end':       pr.period_end.isoformat(),
     })

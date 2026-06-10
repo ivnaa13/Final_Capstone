@@ -164,14 +164,12 @@
             <p>Sign in to your System account</p>
         </div>
 
-        <!-- form errors -->
         {% if form.non_field_errors %}
         <div class="alert-box alert-error">
             <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
         </div>
         {% endif %}
 
-        <!-- django messages (e.g. after logout) -->
         {% if messages %}
         <div class="alert-box alert-info">
             <ul>{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>
@@ -203,8 +201,6 @@
 
             <button type="submit" class="btn-login">Sign In</button>
         </form>
-
-        <!-- no public register — accounts are created by HRD / IT Admin -->
         <div class="info-text">
             Don't have an account?<br>
             <span>Contact your IT Administrator</span>

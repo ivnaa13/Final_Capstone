@@ -355,7 +355,6 @@
             --sidebar-width: 240px;
             --topbar-h: 54px;
 
-            /* Updated color palette to match Image 2 style */
             --bg-root:       #0f1f38;
             --bg-sidebar:    #0a1628;
             --bg-content:    #0f1f38;
@@ -525,7 +524,6 @@
         }
         body.pov-hrd #main-wrapper.expanded { margin-left: 0; }
 
-        /* ── TOPBAR HRD - Updated: removed settings, clean look ── */
         body.pov-hrd .topbar {
             background: var(--bg-root);
             height: var(--topbar-h);
@@ -568,7 +566,6 @@
             color: var(--accent-light);
             border: 1px solid rgba(59,130,246,0.3);
         }
-        /* Notification badge dot */
         body.pov-hrd .notif-dot {
             position: absolute;
             top: 6px; right: 6px;
@@ -596,7 +593,6 @@
         body.pov-hrd .topbar-avatar:hover { border-color: var(--accent-light); }
         body.pov-hrd .topbar-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Notification panel - hidden by default, toggled by bell */
         body.pov-hrd .notif-panel {
             position: fixed;
             top: calc(var(--topbar-h) + 8px);
@@ -608,7 +604,6 @@
             box-shadow: 0 12px 40px rgba(0,0,0,0.4);
             z-index: 500;
             overflow: hidden;
-            /* Hidden by default */
             opacity: 0;
             transform: translateY(-8px) scale(0.97);
             pointer-events: none;
@@ -866,7 +861,6 @@
         <header class="topbar">
             <div class="topbar-actions">
                 {% block topbar_actions %}
-                <!-- Bell button only — Settings removed -->
                 <button class="topbar-icon-btn" id="bellBtn" title="Notifications">
                     <i class="bi bi-bell"></i>
                     <span class="notif-dot"></span>
@@ -882,7 +876,6 @@
             </div>
         </header>
 
-        <!-- Notification panel (System Activity) - hidden until bell clicked -->
         <div class="notif-panel" id="notifPanel">
             <div class="notif-panel-hdr">
                 <h4>System Activity</h4>
@@ -935,8 +928,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        // ── Sidebar toggle ──
         const sidebar     = document.getElementById('sidebar');
         const mainWrapper = document.getElementById('main-wrapper');
         const toggleBtn   = document.getElementById('sidebarToggle');
@@ -979,7 +972,6 @@
             applyHRDState();
         }
 
-        // ── Bell / Notification panel toggle ──
         const bellBtn    = document.getElementById('bellBtn');
         const notifPanel = document.getElementById('notifPanel');
 
@@ -988,12 +980,10 @@
                 e.stopPropagation();
                 const isOpen = notifPanel.classList.toggle('open');
                 bellBtn.classList.toggle('active', isOpen);
-                // Hide red dot once opened
                 const dot = bellBtn.querySelector('.notif-dot');
                 if (isOpen && dot) dot.style.display = 'none';
             });
 
-            // Close panel when clicking outside
             document.addEventListener('click', (e) => {
                 if (!notifPanel.contains(e.target) && !bellBtn.contains(e.target)) {
                     notifPanel.classList.remove('open');
@@ -1001,7 +991,6 @@
                 }
             });
 
-            // Mark all read link
             const markAllRead = document.getElementById('markAllRead');
             if (markAllRead) {
                 markAllRead.addEventListener('click', () => {
