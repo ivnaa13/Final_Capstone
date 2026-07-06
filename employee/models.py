@@ -123,7 +123,7 @@ class Attendance(models.Model):
     )
 
     user     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
-    employee = models.ForeignKey(          # ← tambahan — link ke tabel legacy
+    employee = models.ForeignKey(         
         Employee,
         on_delete=models.SET_NULL,
         null=True,

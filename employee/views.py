@@ -139,7 +139,7 @@ def checkin(request):
                 user         = request.user,
                 employee     = employee_obj,
                 date         = today,
-                check_in     = now.time(),      
+                check_in     = now,            # <-- diubah dari now.time()
                 check_in_lat = lat,
                 check_in_lng = lng,
                 check_in_address = address,
@@ -160,7 +160,7 @@ def checkin(request):
                 messages.warning(request, 'You have already checked out today.')
                 return redirect('employee-checkin')
 
-            today_attendance.check_out         = now.time()  
+            today_attendance.check_out         = now    # <-- diubah dari now.time()
             today_attendance.check_out_lat     = lat
             today_attendance.check_out_lng     = lng
             today_attendance.check_out_address = address
@@ -173,7 +173,6 @@ def checkin(request):
 
         return redirect('employee-checkin')
 
-    today_attendance = Attendance.objects.filter(user=request.user, date=today).first()
     return render(request, 'employee/attandance_employee.html', {
         'today':            today,
         'today_attendance': today_attendance,
