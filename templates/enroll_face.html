@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% block title %}Rekam Wajah — Face Enrollment{% endblock %}
+{% block nav_emp_profile %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+.enroll-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.enroll-hdr {
+    text-align: center;
+    margin-bottom: 24px;
+}
+.enroll-hdr .icon {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+}
+.enroll-hdr h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+.enroll-hdr p {
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.enroll-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(59,130,246,0.18);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+.enroll-card-hdr {
+    padding: 14px 20px;
+    background: var(--navy);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.enroll-card-hdr h3 {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.status-pill {
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+.status-pill.enrolled {
+    background: rgba(34,197,94,0.15);
+    color: #86efac;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+.status-pill.not-enrolled {
+    background: rgba(220,38,38,0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(220,38,38,0.3);
+}
+
+.enroll-vp {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #060f1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#enroll-video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+}
+#enroll-canvas { display: none; }
+
+.enroll-ph {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255,255,255,.4);
+    text-align: center;
+    padding: 20px;
+}
+.enroll-ph-icon {
+    font-size: 3rem;
+}
+.enroll-ph p {
+    font-size: .82rem;
+    line-height: 1.6;
+}
+
+.enroll-body {
+    padding: 20px;
+}
+
+.enroll-status-box {
+    padding: 12px 14px;
+    background: var(--navy);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    font-size: .82rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+.enroll-status-box.success {
+    background: rgba(34,197,94,0.08);
+    border-color: rgba(34,197,94,0.3);
+    color: #86efac;
+}
+.enroll-status-box.error {
+    background: rgba(220,38,38,0.08);
+    border-color: rgba(220,38,38,0.3);
+    color: #fca5a5;
+}
+
+.enroll-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-enroll {
+    flex: 1;
+    min-width: 140px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all .2s;
+}
+.btn-enroll-cam {
+    background: rgba(59,130,246,0.18);
+    color: #93c5fd;
+    border: 1px solid rgba(59,130,246,0.4);
+}
+.btn-enroll-cam:hover { background: rgba(59,130,246,0.3); }
+
+.btn-enroll-capture {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: white;
+}
+.btn-enroll-capture:hover:not(:disabled) {
+    background: linear-gradient(135deg, #15803d, #14532d);
+    transform: translateY(-1px);
+}
+.btn-enroll-capture:disabled {
+    background: #1e3a5f !important;
+    color: #4d6a8a !important;
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.btn-enroll-save {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    transition: all .2s;
+}
+.btn-enroll-save:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+}
+.btn-enroll-save:disabled {
+    background: #1e3a5f !important;
+    color: #4d6a8a !important;
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.back-link {
+    display: block;
+    text-align: center;
+    margin-top: 18px;
+    font-size: .8rem;
+    color: var(--muted);
+    text-decoration: none;
+}
+.back-link:hover { color: var(--text); }
+
+.messages-box { margin-bottom: 18px; }
+.msg-item {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: .82rem;
+    margin-bottom: 8px;
+}
+.msg-item.success { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+.msg-item.error   { background: rgba(220,38,38,0.1); color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
+.msg-item.warning { background: rgba(245,158,11,0.1); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+</style>
+{% endblock %}
+
+{% block emp_content %}
+<div class="enroll-wrap">
+
+    <div class="enroll-hdr">
+        <div class="icon">🎭</div>
+        <h1>Rekam Wajah Anda</h1>
+        <p>Wajah ini akan digunakan untuk verifikasi identitas saat Anda absen (check-in/check-out).<br>
+        Pastikan pencahayaan cukup dan wajah menghadap kamera dengan jelas.</p>
+    </div>
+
+    {% if messages %}
+    <div class="messages-box">
+        {% for message in messages %}
+            <div class="msg-item {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="enroll-card">
+        <div class="enroll-card-hdr">
+            <h3>📷 Kamera</h3>
+            <span class="status-pill {% if already_enrolled %}enrolled{% else %}not-enrolled{% endif %}">
+                {% if already_enrolled %}✓ Sudah Terdaftar{% else %}Belum Terdaftar{% endif %}
+            </span>
+        </div>
+
+        <div class="enroll-vp" id="enroll-vp">
+            <video id="enroll-video" autoplay muted playsinline></video>
+            <canvas id="enroll-canvas"></canvas>
+
+            <div class="enroll-ph" id="enroll-ph">
+                <div class="enroll-ph-icon">📷</div>
+                <p>Klik <strong>"Buka Kamera"</strong> untuk mulai merekam wajah Anda</p>
+            </div>
+        </div>
+
+        <div class="enroll-body">
+            <div class="enroll-status-box" id="enroll-status">
+                {% if already_enrolled %}
+                    Wajah Anda sudah terdaftar. Anda bisa rekam ulang jika perlu (misal penampilan berubah drastis).
+                {% else %}
+                    Wajah Anda belum terdaftar. Rekam sekarang supaya bisa absen.
+                {% endif %}
+            </div>
+
+            <div class="enroll-actions">
+                <button type="button" class="btn-enroll btn-enroll-cam" id="btn-open-cam" onclick="startEnrollCam()">
+                    📷 Buka Kamera
+                </button>
+                <button type="button" class="btn-enroll btn-enroll-capture" id="btn-capture" onclick="captureFace()" disabled>
+                    ✅ Ambil Wajah
+                </button>
+            </div>
+
+            <form method="POST" id="enroll-form">
+                {% csrf_token %}
+                <input type="hidden" name="face_descriptor" id="face_descriptor_input">
+                <button type="submit" class="btn-enroll-save" id="btn-save" disabled>
+                    💾 Simpan & Daftarkan Wajah
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <a href="{% url 'employee-checkin' %}" class="back-link">← Kembali ke halaman Absen</a>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const ENROLL_MODELS_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+let enrollStream = null;
+let enrollModelsLoaded = false;
+
+function setStatusBox(msg, type) {
+    const box = document.getElementById('enroll-status');
+    box.className = 'enroll-status-box' + (type ? ' ' + type : '');
+    box.textContent = msg;
+}
+
+async function startEnrollCam() {
+    const btnOpen = document.getElementById('btn-open-cam');
+    try {
+        if (!enrollModelsLoaded) {
+            setStatusBox('Memuat model face recognition, mohon tunggu...', '');
+            await faceapi.nets.tinyFaceDetector.loadFromUri(ENROLL_MODELS_URL);
+            await faceapi.nets.faceLandmark68TinyNet.loadFromUri(ENROLL_MODELS_URL);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(ENROLL_MODELS_URL);
+            enrollModelsLoaded = true;
+        }
+
+        enrollStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        const video = document.getElementById('enroll-video');
+        video.srcObject = enrollStream;
+        video.style.display = 'block';
+        document.getElementById('enroll-ph').style.display = 'none';
+        await video.play();
+
+        setStatusBox('Posisikan wajah Anda di tengah kamera, lalu klik "Ambil Wajah"', '');
+        document.getElementById('btn-capture').disabled = false;
+        btnOpen.textContent = '📷 Kamera Aktif';
+    } catch (err) {
+        setStatusBox('⚠️ Gagal akses kamera: ' + err.message, 'error');
+    }
+}
+
+async function captureFace() {
+    const video = document.getElementById('enroll-video');
+    setStatusBox('Mendeteksi wajah...', '');
+
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+    const result = await faceapi
+        .detectSingleFace(video, options)
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+    if (!result) {
+        setStatusBox('❌ Wajah tidak terdeteksi. Pastikan pencahayaan cukup dan coba lagi.', 'error');
+        return;
+    }
+
+    const descriptor = Array.from(result.descriptor);
+    document.getElementById('face_descriptor_input').value = JSON.stringify(descriptor);
+
+    setStatusBox('✅ Wajah berhasil direkam! Klik "Simpan & Daftarkan Wajah" untuk menyimpan.', 'success');
+
+    if (enrollStream) {
+        enrollStream.getTracks().forEach(t => t.stop());
+        video.style.display = 'none';
+        document.getElementById('enroll-ph').style.display = 'flex';
+        document.getElementById('enroll-ph').innerHTML = '<div class="enroll-ph-icon">✅</div><p>Wajah berhasil direkam</p>';
+    }
+
+    document.getElementById('btn-capture').disabled = true;
+    document.getElementById('btn-open-cam').textContent = '🔄 Rekam Ulang';
+    document.getElementById('btn-save').disabled = false;
+}
+</script>
+{% endblock %}

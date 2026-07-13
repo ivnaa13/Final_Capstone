@@ -233,6 +233,78 @@
 }
 .btn-save:hover { background: var(--accent-light); transform: translateY(-1px); }
 
+/* ── FACE RECOGNITION CARD ── */
+.face-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.face-card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.face-card-header h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.face-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+}
+.face-status-badge.enrolled {
+    background: rgba(34,197,94,.12);
+    border: 1px solid rgba(34,197,94,.3);
+    color: #86efac;
+}
+.face-status-badge.not-enrolled {
+    background: rgba(220,38,38,.12);
+    border: 1px solid rgba(220,38,38,.3);
+    color: #fca5a5;
+}
+.face-card-body {
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.face-card-body p {
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    flex: 1;
+    min-width: 200px;
+}
+.btn-face-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: .85rem;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .18s;
+    white-space: nowrap;
+}
+.btn-face-link:hover { background: var(--accent-light); transform: translateY(-1px); }
+
 /* ── ACCOUNT DANGER ZONE ── */
 .danger-zone {
     background: rgba(220,38,38,.08);
@@ -270,6 +342,8 @@
     .emp-layout  { grid-template-columns: 1fr; }
     .detail-grid { grid-template-columns: 1fr; }
     .detail-item.full { grid-column: span 1; }
+    .face-card-body { flex-direction: column; align-items: stretch; }
+    .btn-face-link { justify-content: center; }
 }
 </style>
 {% endblock %}
@@ -445,5 +519,36 @@
                 </form>
             </div>
         </div>
-</script>
+
+        <div class="face-card">
+            <div class="face-card-header">
+                <h3>🎭 Face Recognition</h3>
+                {% if user.profile.face_descriptor %}
+                    <span class="face-status-badge enrolled">✓ Wajah Terdaftar</span>
+                {% else %}
+                    <span class="face-status-badge not-enrolled">⚠ Belum Terdaftar</span>
+                {% endif %}
+            </div>
+            <div class="face-card-body">
+                <p>
+                    {% if user.profile.face_descriptor %}
+                        Wajah Anda sudah terdaftar dan digunakan untuk verifikasi identitas saat absen. Anda bisa rekam ulang jika penampilan berubah drastis.
+                    {% else %}
+                        Wajah Anda belum terdaftar. Anda tidak dapat melakukan absen sampai wajah didaftarkan terlebih dahulu.
+                    {% endif %}
+                </p>
+                <a href="{% url 'employee-enroll-face' %}" class="btn-face-link">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 10l4.553-2.069A1 1 0 0121 8.868V15.131a1 1 0 01-1.447.901L15 14
+                                 M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                    </svg>
+                    {% if user.profile.face_descriptor %}Rekam Ulang Wajah{% else %}Rekam Wajah Sekarang{% endif %}
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 {% endblock %}

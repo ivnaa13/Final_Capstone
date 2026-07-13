@@ -1,15 +1,23 @@
 import calendar
+from datetime import timedelta
+
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
+from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django import forms
+import os
+import json
 
-from .models import Attendance, Leave
+from .models import Attendance, Leave, LoginOTP
+from .forms import LoginFormCaptcha, OTPVerifyForm
+from .utils import send_whatsapp_otp, verify_face
 
 
 class RegisterForm(UserCreationForm):
@@ -38,6 +46,7 @@ def _get_role(user):
     except Exception:
         return 'hrd' if user.is_staff else 'employee'
 
+
 def register_view(request):
     form = RegisterForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -49,28 +58,134 @@ def register_view(request):
     return render(request, 'register.html', {'form': form})
 
 
+# ========================================================
+# LOGIN FLOW: Username/Password + CAPTCHA -> OTP WhatsApp
+# ========================================================
+
 def login_view(request):
-    form = AuthenticationForm(request, data=request.POST or None)
+    """Step 1: Login dengan username, password, CAPTCHA -> kirim OTP WA"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    form = LoginFormCaptcha(request, data=request.POST or None)
+
     if request.method == 'POST':
         if form.is_valid():
-            logout(request)
             user = form.get_user()
-            login(request, user)
-            messages.success(request, f'Welcome, {user.first_name or user.username}!')
-            role = _get_role(user)
-            if role == 'hrd':
-                return redirect('hrd-dashboard')
-            else:
-                return redirect('employee-dashboard')
+
+            # Pastikan user punya nomor HP terdaftar
+            phone = getattr(getattr(user, 'profile', None), 'phone', None)
+            if not phone:
+                messages.error(request, 'Nomor HP belum terdaftar. Hubungi HRD untuk mendaftarkan nomor Anda.')
+                return render(request, 'login.html', {'form': form})
+
+            # Generate & kirim OTP
+            otp_code = LoginOTP.generate_code()
+            otp = LoginOTP.objects.create(
+                user=user,
+                code=otp_code,
+                expired_at=timezone.now() + timedelta(minutes=5),
+            )
+
+            sent = send_whatsapp_otp(phone, otp_code)
+            if not sent:
+                messages.error(request, 'Gagal mengirim OTP ke WhatsApp. Coba lagi atau hubungi HRD.')
+                return render(request, 'login.html', {'form': form})
+
+            # Simpan status "pending" di session — user BELUM login penuh
+            request.session['pending_user_id'] = user.id
+            request.session['otp_id'] = otp.id
+
+            messages.success(request, f'Kode OTP dikirim ke WhatsApp {phone[:6]}xxxxx')
+            return redirect('otp-verify')
         else:
-            messages.error(request, 'Invalid username or password.')
+            messages.error(request, 'Username, password, atau captcha salah.')
+
     return render(request, 'login.html', {'form': form})
+
+
+def otp_verify_view(request):
+    """Step 2: Verifikasi OTP dari WhatsApp, baru login penuh"""
+    pending_user_id = request.session.get('pending_user_id')
+    otp_id = request.session.get('otp_id')
+
+    if not pending_user_id or not otp_id:
+        messages.error(request, 'Sesi tidak valid. Silakan login ulang.')
+        return redirect('login')
+
+    form = OTPVerifyForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        entered_code = form.cleaned_data['otp_code']
+
+        try:
+            otp = LoginOTP.objects.get(id=otp_id, user_id=pending_user_id)
+        except LoginOTP.DoesNotExist:
+            messages.error(request, 'OTP tidak ditemukan. Silakan login ulang.')
+            return redirect('login')
+
+        if not otp.is_valid():
+            messages.error(request, 'Kode OTP kadaluarsa. Silakan login ulang.')
+            return redirect('login')
+
+        if otp.code != entered_code:
+            messages.error(request, 'Kode OTP salah!')
+            return render(request, 'otp_verify.html', {'form': form})
+
+        # OTP benar -> login penuh
+        otp.is_used = True
+        otp.save()
+
+        user = User.objects.get(id=pending_user_id)
+        login(request, user)
+
+        del request.session['pending_user_id']
+        del request.session['otp_id']
+
+        messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
+
+        role = _get_role(user)
+        return redirect('hrd-dashboard' if role == 'hrd' else 'employee-dashboard')
+
+    return render(request, 'otp_verify.html', {'form': form})
+
+
+def resend_otp_view(request):
+    """Kirim ulang OTP"""
+    pending_user_id = request.session.get('pending_user_id')
+    if not pending_user_id:
+        messages.error(request, 'Sesi tidak valid. Silakan login ulang.')
+        return redirect('login')
+
+    user = User.objects.get(id=pending_user_id)
+    phone = getattr(getattr(user, 'profile', None), 'phone', None)
+
+    otp_code = LoginOTP.generate_code()
+    otp = LoginOTP.objects.create(
+        user=user,
+        code=otp_code,
+        expired_at=timezone.now() + timedelta(minutes=5),
+    )
+
+    sent = send_whatsapp_otp(phone, otp_code)
+    if sent:
+        request.session['otp_id'] = otp.id
+        messages.success(request, 'Kode OTP baru telah dikirim!')
+    else:
+        messages.error(request, 'Gagal mengirim ulang OTP.')
+
+    return redirect('otp-verify')
 
 
 def logout_view(request):
     logout(request)
     messages.info(request, 'You have been logged out.')
     return redirect('login')
+
+
+# ========================================================
+# DASHBOARD & FITUR LAIN
+# ========================================================
 
 @login_required
 def dashboard(request):
@@ -103,6 +218,11 @@ def dashboard(request):
     }
     return render(request, 'employee/dashboard.html', context)
 
+
+# ========================================================
+# CHECK-IN / CHECK-OUT — DENGAN FACE RECOGNITION
+# ========================================================
+
 @login_required
 def checkin(request):
     if _get_role(request.user) == 'hrd':
@@ -113,6 +233,7 @@ def checkin(request):
     today_attendance = Attendance.objects.filter(user=request.user, date=today).first()
 
     employee_obj = None
+    profile_obj  = None
     try:
         profile_obj  = getattr(request.user, 'profile', None)
         employee_obj = getattr(profile_obj, 'employee', None)
@@ -123,6 +244,17 @@ def checkin(request):
         action    = request.POST.get('action', 'checkin')
         address   = request.POST.get('address', '')
         photo_b64 = request.POST.get('photo', '')
+        face_descriptor_submitted = request.POST.get('face_descriptor', '')
+
+        # ===== VALIDASI WAJAH — WAJIB COCOK =====
+        stored_descriptor = getattr(profile_obj, 'face_descriptor', None)
+        is_match, distance, msg = verify_face(stored_descriptor, face_descriptor_submitted)
+
+        if not is_match:
+            messages.error(request, f'❌ {msg}')
+            return redirect('employee-checkin')
+        # ===== END VALIDASI WAJAH =====
+
         try:
             lat = float(request.POST.get('latitude'))  if request.POST.get('latitude')  else None
             lng = float(request.POST.get('longitude')) if request.POST.get('longitude') else None
@@ -139,7 +271,7 @@ def checkin(request):
                 user         = request.user,
                 employee     = employee_obj,
                 date         = today,
-                check_in     = now,            # <-- diubah dari now.time()
+                check_in     = now,
                 check_in_lat = lat,
                 check_in_lng = lng,
                 check_in_address = address,
@@ -150,7 +282,7 @@ def checkin(request):
             att.save()
             messages.success(request,
                 f'✅ Check-in {"on time" if status == "present" else "late"} '
-                f'at {now.strftime("%H:%M")}')
+                f'at {now.strftime("%H:%M")} — Wajah terverifikasi')
 
         elif action == 'checkout':
             if not today_attendance or not today_attendance.check_in:
@@ -160,7 +292,7 @@ def checkin(request):
                 messages.warning(request, 'You have already checked out today.')
                 return redirect('employee-checkin')
 
-            today_attendance.check_out         = now    # <-- diubah dari now.time()
+            today_attendance.check_out         = now
             today_attendance.check_out_lat     = lat
             today_attendance.check_out_lng     = lng
             today_attendance.check_out_address = address
@@ -169,7 +301,7 @@ def checkin(request):
             today_attendance.save()
             messages.success(request,
                 f'👋 Check-out at {now.strftime("%H:%M")} '
-                f'— Duration: {today_attendance.duration or "—"}')
+                f'— Duration: {today_attendance.duration or "—"} — Wajah terverifikasi')
 
         return redirect('employee-checkin')
 
@@ -177,7 +309,9 @@ def checkin(request):
         'today':            today,
         'today_attendance': today_attendance,
         'employee':         employee_obj,
+        'face_enrolled':    bool(getattr(profile_obj, 'face_descriptor', None)),
     })
+
 
 @login_required
 def attendance_history(request):
@@ -235,6 +369,7 @@ def attendance_history(request):
         'year_choices':    _year_choices(),
     })
 
+
 def _get_period_stats(user, month, year):
     qs      = Attendance.objects.filter(user=user, date__month=month, date__year=year)
     present = qs.filter(status='present').count()
@@ -278,11 +413,11 @@ def reports(request):
 
     return render(request, 'employee/reports.html', {
         'stats':          stats,
-        'attendances':    qs,       
+        'attendances':    qs,
         'selected_month': selected_month,
         'selected_year':  selected_year,
         'current_year':   today.year,
-        'month_choices':  _month_choices(),  
+        'month_choices':  _month_choices(),
         'year_choices':   _year_choices(),
         'month_name':     calendar.month_name[selected_month],
     })
@@ -397,6 +532,7 @@ def report_pdf(request):
 
     except ImportError:
         return HttpResponse('pip install reportlab', content_type='text/plain', status=501)
+
 
 @login_required
 def payroll(request):
@@ -606,6 +742,7 @@ def payslip_pdf(request):
     except ImportError:
         return HttpResponse('pip install reportlab', content_type='text/plain', status=501)
 
+
 @login_required
 def leave_request(request):
     if _get_role(request.user) == 'hrd':
@@ -678,6 +815,7 @@ def cancel_leave(request, leave_id):
     messages.success(request, 'Leave request cancelled.')
     return redirect('employee-leave')
 
+
 @login_required
 def profile(request):
     if _get_role(request.user) == 'hrd':
@@ -713,10 +851,34 @@ def update_phone(request):
     messages.success(request, 'Nomor HP berhasil diperbarui.')
     return redirect('employee-profile')
 
-from django.contrib.auth.models import User
-from django.conf import settings
-import os
-import json
+
+@login_required
+def enroll_face(request):
+    """
+    Halaman self-service untuk employee merekam/reset wajahnya sendiri.
+    Berguna untuk akun lama yang dibuat sebelum fitur face recognition ada,
+    atau untuk rekam ulang jika wajah berubah drastis.
+    """
+    if _get_role(request.user) == 'hrd':
+        return redirect('hrd-dashboard')
+
+    profile_obj = getattr(request.user, 'profile', None)
+    already_enrolled = bool(getattr(profile_obj, 'face_descriptor', None))
+
+    if request.method == 'POST':
+        face_descriptor = request.POST.get('face_descriptor', '').strip()
+        if not face_descriptor:
+            messages.error(request, 'Wajah tidak terdeteksi. Coba lagi.')
+            return redirect('employee-enroll-face')
+
+        profile_obj.face_descriptor = face_descriptor
+        profile_obj.save(update_fields=['face_descriptor'])
+        messages.success(request, '✅ Wajah berhasil didaftarkan! Sekarang Anda bisa absen menggunakan face recognition.')
+        return redirect('employee-checkin')
+
+    return render(request, 'enroll_face.html', {
+        'already_enrolled': already_enrolled,
+    })
 
 
 @login_required
@@ -775,23 +937,9 @@ def admin_dashboard(request):
 
     return render(request, 'employee/dashboard.html', context)
 
+
 def _determine_status(t):
     return 'present' if (t.hour < 8 or (t.hour == 8 and t.minute == 0)) else 'late'
-
-
-def _get_period_stats(user, month, year):
-    qs      = Attendance.objects.filter(user=user, date__month=month, date__year=year)
-    present = qs.filter(status='present').count()
-    late    = qs.filter(status='late').count()
-    absent  = qs.filter(status='absent').count()
-    leave   = qs.filter(status='leave').count()
-    total   = qs.count()
-    rate    = round((present + late) / total * 100, 2) if total else 0.0
-    return {
-        'present': present, 'late': late,
-        'absent':  absent,  'leave': leave,
-        'total':   total,   'rate': rate,
-    }
 
 
 def _work_summary(user, today):

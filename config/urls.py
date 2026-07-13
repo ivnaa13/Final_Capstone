@@ -32,8 +32,11 @@ urlpatterns = [
 
     path('', lambda req: redirect('login'), name='root'),
 
-    path('login/',  auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'),         name='logout'),
+    # ===== LOGIN FLOW: Username/Password + CAPTCHA -> OTP WhatsApp =====
+    path('login/',       employee_views.login_view,      name='login'),
+    path('otp-verify/',  employee_views.otp_verify_view,  name='otp-verify'),
+    path('otp-resend/',  employee_views.resend_otp_view,  name='otp-resend'),
+    path('logout/',      auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 
     path('dashboard/', dashboard_redirect, name='dashboard'),
 
@@ -50,7 +53,7 @@ urlpatterns = [
 
     path('hrd/api/attendance/',         hrd_views.attendance_api,    name='hrd-attendance-api'),
     path('hrd/api/attendance/export/',  hrd_views.attendance_export, name='hrd-attendance-export'),
-    
+
     path('hrd/leave/',                           hrd_views.leave_approval,         name='hrd-leave'),
     path('hrd/leave/<int:leave_id>/approve/',    hrd_views.approve_leave,          name='hrd-approve-leave'),
     path('hrd/leave/<int:leave_id>/reject/',     hrd_views.reject_leave,           name='hrd-reject-leave'),
@@ -74,8 +77,9 @@ urlpatterns = [
     path('employee/payroll/',                    employee_views.payroll,           name='employee-payroll'),
     path('employee/payslip_pdf/',                employee_views.payslip_pdf,       name='employee-payslip-pdf'),
 
-    path('employee/profile/',                    employee_views.profile,           name='employee-profile'),
-    path('employee/profile/update-phone/',       employee_views.update_phone,      name='employee-update-phone'),
+   path('employee/profile/',                    employee_views.profile,           name='employee-profile'),
+path('employee/profile/update-phone/',       employee_views.update_phone,      name='employee-update-phone'),
+path('employee/profile/enroll-face/',         employee_views.enroll_face,       name='employee-enroll-face'),
 ]
 
 if settings.DEBUG:

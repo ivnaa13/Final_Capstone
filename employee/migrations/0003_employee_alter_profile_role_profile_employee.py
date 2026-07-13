@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Employee',
                 'verbose_name_plural': 'Employees',
                 'db_table': 'employee',
-                'managed': False,
+                'managed': True,
             },
         ),
         migrations.AlterField(

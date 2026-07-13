@@ -5,11 +5,6 @@
 {% block extra_css %}
 <style>
 
-/* ═══════════════════════════════════════════════
-   ATTENDANCE — Employee POV
-   ═══════════════════════════════════════════════ */
-
-/* ── PAGE HEADER ── */
 .att-hdr {
     display: flex; align-items: flex-start;
     justify-content: space-between;
@@ -42,9 +37,9 @@
 }
 .v-dot.ok   { background: #22c55e; animation: vblink 1.5s ease-in-out infinite; }
 .v-dot.scan { background: #3b82f6; animation: vblink .8s ease-in-out infinite; }
+.v-dot.fail { background: #dc2626; animation: vblink .6s ease-in-out infinite; }
 @keyframes vblink { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-/* ── LAYOUT ── */
 .att-layout {
     display: grid;
     grid-template-columns: 1fr 300px;
@@ -52,7 +47,6 @@
 }
 @media(max-width:1050px){ .att-layout{ grid-template-columns: 1fr; } }
 
-/* ══ CAMERA CARD ══ */
 .cam-card {
     background: var(--navy-light);
     border: 1px solid rgba(59,130,246,0.18);
@@ -73,7 +67,6 @@
 .cam-card-hdr h3 svg { color: #60a5fa; stroke: #60a5fa; }
 .cam-state-txt { font-size: .72rem; color: var(--muted); }
 
-/* viewport */
 .cam-vp {
     position: relative; width: 100%; aspect-ratio: 16/9;
     background: #060f1e;
@@ -89,7 +82,6 @@
 }
 #cam-canvas { display: none; }
 
-/* corner brackets overlay */
 .cam-vp::before, .cam-vp::after {
     content: '';
     position: absolute;
@@ -101,7 +93,6 @@
 .cam-vp::before { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
 .cam-vp::after  { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 3px 0 0; }
 
-/* scan line */
 .scan-line {
     position: absolute; inset: 0;
     pointer-events: none; overflow: hidden;
@@ -118,28 +109,6 @@
 }
 @keyframes scan { 0%{top:6%} 50%{top:90%} 100%{top:6%} }
 
-/* face box */
-.face-box {
-    position: absolute;
-    border: 2px solid #22c55e;
-    border-radius: 6px;
-    pointer-events: none;
-    display: none;
-    box-shadow: 0 0 24px rgba(34,197,94,.35);
-    z-index: 6;
-}
-.face-box.show { display: block; }
-.face-lbl {
-    position: absolute; top:-24px; left:50%;
-    transform: translateX(-50%);
-    background: #16a34a; color: #fff;
-    font-size: .6rem; font-weight: 700;
-    padding: 2px 9px; border-radius: 4px;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(22,163,74,.4);
-}
-
-/* placeholder */
 .cam-ph {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -165,8 +134,10 @@
     border-color: rgba(59,130,246,0.7);
     color: #bfdbfe;
 }
+.btn-start-inner:disabled {
+    opacity: .5; cursor: not-allowed;
+}
 
-/* status bar */
 .cam-status-bar {
     position: absolute; bottom:0; left:0; right:0;
     background: rgba(6,15,30,.85);
@@ -175,13 +146,14 @@
     display: flex; align-items: center; gap: 14px;
     z-index: 7;
     border-top: 1px solid rgba(255,255,255,0.07);
+    flex-wrap: wrap;
 }
 .csb-item { display: flex; align-items: center; gap: 6px; font-size: .67rem; color: rgba(255,255,255,.5); }
 .csb-dot  { width:6px; height:6px; border-radius:50%; background:#2d3e55; flex-shrink:0; }
 .csb-dot.on { background:#22c55e; animation:vblink 2s infinite; }
+.csb-dot.fail { background:#dc2626; animation:vblink 1s infinite; }
 .csb-sep  { width:1px; height:12px; background:rgba(255,255,255,.12); }
 
-/* controls */
 .cam-ctrls {
     padding: 14px 20px;
     background: var(--navy);
@@ -214,8 +186,10 @@
     border-color: rgba(220,38,38,0.4);
     color: #fca5a5;
 }
+.btn-cam:disabled {
+    opacity: .4; cursor: not-allowed;
+}
 
-/* Check-In / Check-Out big buttons */
 .btn-ci, .btn-co {
     padding: 11px 28px; border-radius: 50px;
     border: none; font-family: 'Plus Jakarta Sans', sans-serif;
@@ -252,7 +226,6 @@
     transform: none !important; box-shadow: none !important;
 }
 
-/* location strip */
 .loc-strip {
     padding: 10px 20px;
     background: var(--navy);
@@ -262,10 +235,8 @@
 }
 .loc-strip strong { color: #93c5fd; font-weight: 600; }
 
-/* ══ RIGHT PANEL ══ */
 .info-panel { display: flex; flex-direction: column; gap: 14px; }
 
-/* info card */
 .info-card {
     background: var(--navy-light);
     border: 1px solid rgba(59,130,246,0.15);
@@ -282,7 +253,6 @@
     letter-spacing: .2px;
 }
 
-/* GPS coordinates */
 .coords-blk { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .blk-title {
     font-size: .6rem; font-weight: 700; text-transform: uppercase;
@@ -305,7 +275,6 @@
 .acc-m { background: rgba(217,119,6,0.2);  color: #fcd34d; border: 1px solid rgba(217,119,6,0.3); }
 .acc-l { background: rgba(220,38,38,0.2);  color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
 
-/* mini 2-col grid */
 .mini-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 9px; padding: 12px 14px;
@@ -325,7 +294,6 @@
 .mc-main { font-size: .89rem; font-weight: 700; color: var(--text); line-height: 1.2; }
 .mc-sub  { font-size: .64rem; color: var(--muted); margin-top: 3px; line-height: 1.45; }
 
-/* today's log */
 .log-blk { padding: 12px 15px; }
 .log-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -338,7 +306,6 @@
 .lr-v.g { color: #86efac; }
 .lr-v.r { color: #fca5a5; }
 
-/* verification checklist */
 .verify-card {
     background: var(--navy-light);
     border: 1px solid rgba(59,130,246,0.15);
@@ -369,14 +336,12 @@
 .vi-st.fail { color: #fca5a5; }
 .vi-st.pend { color: var(--faint); }
 
-/* badges */
 .badge-green  { background: rgba(22,163,74,0.2);    color: #86efac;  border: 1px solid rgba(22,163,74,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
 .badge-yellow { background: rgba(217,119,6,0.2);    color: #fcd34d;  border: 1px solid rgba(217,119,6,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
 .badge-red    { background: rgba(220,38,38,0.2);    color: #fca5a5;  border: 1px solid rgba(220,38,38,0.3);   padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
 .badge-blue   { background: rgba(59,130,246,0.2);   color: #93c5fd;  border: 1px solid rgba(59,130,246,0.3);  padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
 .badge-gray   { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid rgba(255,255,255,0.12); padding:2px 10px; border-radius:20px; font-size:.68rem; font-weight:600; }
 
-/* toast */
 .att-toast {
     position: fixed; bottom:24px; right:24px;
     background: var(--navy);
@@ -390,6 +355,17 @@
     z-index:9999; max-width:320px;
 }
 .att-toast.show { transform:translateY(0); opacity:1; }
+
+.not-enrolled-banner {
+    background: rgba(220,38,38,0.12);
+    border: 1px solid rgba(220,38,38,0.35);
+    color: #fca5a5;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: .8rem;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+}
 </style>
 {% endblock %}
 
@@ -399,6 +375,7 @@
 <script>
     const checkedIn  = {% if today_attendance and today_attendance.check_in %}true{% else %}false{% endif %};
     const checkedOut = {% if today_attendance and today_attendance.check_out %}true{% else %}false{% endif %};
+    const faceEnrolled = {% if face_enrolled %}true{% else %}false{% endif %};
 </script>
 
 <div id="att-root">
@@ -422,6 +399,12 @@
         </div>
     </div>
 
+    {% if not face_enrolled %}
+    <div class="not-enrolled-banner">
+        ⚠️ Wajah Anda belum terdaftar di sistem. Hubungi HRD untuk mendaftarkan wajah Anda sebelum bisa absen.
+    </div>
+    {% endif %}
+
     <div class="att-layout">
 
         <div class="cam-card">
@@ -441,14 +424,11 @@
                 <video id="cam-video" autoplay muted playsinline></video>
                 <canvas id="cam-canvas"></canvas>
                 <div class="scan-line" id="scan-line"></div>
-                <div class="face-box" id="face-box">
-                    <span class="face-lbl">Face Detected ✓</span>
-                </div>
 
                 <div class="cam-ph" id="cam-ph">
                     <div class="cam-ph-icon">📷</div>
-                    <p>Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
-                    <button class="btn-start-inner" onclick="startCam()">
+                    <p id="cam-ph-text">Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
+                    <button class="btn-start-inner" id="btn-start-inner" onclick="startCam()" {% if not face_enrolled %}disabled{% endif %}>
                         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke-width="2"/>
                             <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
@@ -463,12 +443,14 @@
                     <div class="csb-item"><div class="csb-dot" id="sd-face"></div><span id="st-face">No face</span></div>
                     <div class="csb-sep"></div>
                     <div class="csb-item"><div class="csb-dot" id="sd-loc"></div><span id="st-loc">Location pending</span></div>
+                    <div class="csb-sep"></div>
+                    <div class="csb-item"><div class="csb-dot" id="sd-match"></div><span id="st-match">Identity pending</span></div>
                 </div>
             </div>
 
             <div class="cam-ctrls">
                 <div style="display:flex;gap:8px;">
-                    <button class="btn-cam" id="btn-start" onclick="startCam()">
+                    <button class="btn-cam" id="btn-start" onclick="startCam()" {% if not face_enrolled %}disabled{% endif %}>
                         <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke-width="2"/>
                             <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
@@ -486,11 +468,12 @@
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     <form id="ci-form" method="post" action="{% url 'employee-checkin' %}" style="display:inline;">
                         {% csrf_token %}
-                        <input type="hidden" name="action"    value="checkin">
-                        <input type="hidden" name="latitude"  id="ci-lat">
-                        <input type="hidden" name="longitude" id="ci-lng">
-                        <input type="hidden" name="address"   id="ci-addr">
-                        <input type="hidden" name="photo"     id="ci-photo">
+                        <input type="hidden" name="action"          value="checkin">
+                        <input type="hidden" name="latitude"        id="ci-lat">
+                        <input type="hidden" name="longitude"       id="ci-lng">
+                        <input type="hidden" name="address"         id="ci-addr">
+                        <input type="hidden" name="photo"           id="ci-photo">
+                        <input type="hidden" name="face_descriptor" id="ci-descriptor">
                         <button type="button" class="btn-ci" id="btn-ci" onclick="doCheckIn()" disabled>
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -500,11 +483,12 @@
                     </form>
                     <form id="co-form" method="post" action="{% url 'employee-checkin' %}" style="display:inline;">
                         {% csrf_token %}
-                        <input type="hidden" name="action"    value="checkout">
-                        <input type="hidden" name="latitude"  id="co-lat">
-                        <input type="hidden" name="longitude" id="co-lng">
-                        <input type="hidden" name="address"   id="co-addr">
-                        <input type="hidden" name="photo"     id="co-photo">
+                        <input type="hidden" name="action"          value="checkout">
+                        <input type="hidden" name="latitude"        id="co-lat">
+                        <input type="hidden" name="longitude"       id="co-lng">
+                        <input type="hidden" name="address"         id="co-addr">
+                        <input type="hidden" name="photo"           id="co-photo">
+                        <input type="hidden" name="face_descriptor" id="co-descriptor">
                         <button type="button" class="btn-co" id="btn-co" onclick="doCheckOut()" disabled>
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -518,7 +502,6 @@
             <div class="loc-strip">
                 <span>📍 Lat: <strong id="s-lat">Detecting…</strong></span>
                 <span>🧭 Lng: <strong id="s-lng">Detecting…</strong></span>
-                <span id="s-dist-wrap" style="display:none;">🏢 Distance: <strong id="s-dist">—</strong></span>
             </div>
         </div>
 
@@ -600,6 +583,11 @@
                     <span class="vi-st pend" id="vi-face-st">Pending</span>
                 </div>
                 <div class="vi-row">
+                    <div class="vi-ico pend" id="vi-match-ico">🪪</div>
+                    <span class="vi-lbl">Identity Match</span>
+                    <span class="vi-st pend" id="vi-match-st">Pending</span>
+                </div>
+                <div class="vi-row">
                     <div class="vi-ico pend" id="vi-loc-ico">📍</div>
                     <span class="vi-lbl">Location Acquired</span>
                     <span class="vi-st pend" id="vi-loc-st">Pending</span>
@@ -617,13 +605,21 @@
 
 
 {% block extra_js %}
+
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
 <script>
 
 let stream       = null;
 let faceDetected = false;
+let faceMatched  = false;
 let locOK        = false;
-let faceTimer    = null;
 let userLat = null, userLng = null, userAddr = '';
+let currentDescriptor = null;
+let detectionInterval = null;
+let modelsLoaded = false;
+
+const FACE_MODELS_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
 
 let _tt = null;
 function toast(msg, ms = 4000) {
@@ -681,7 +677,7 @@ function onLocOK(pos) {
         });
 
     setLocDot(true);
-    evaluateReady();
+    updateBtns();
 }
 function onLocFail() {
     document.getElementById('c-lat').textContent = 'Access denied';
@@ -706,9 +702,33 @@ function setLocFail(msg) {
     s.className='vi-st fail'; s.textContent='Failed';
 }
 
-async function startCam() {
-    if (stream) return;
+/* ===== FACE RECOGNITION ===== */
+
+async function loadFaceModels() {
+    if (modelsLoaded) return;
+    document.getElementById('cam-ph-text').innerHTML = 'Loading face recognition models…<br><small>Mohon tunggu sebentar</small>';
     try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL);
+        await faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACE_MODELS_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL);
+        modelsLoaded = true;
+    } catch (err) {
+        console.error('Gagal load model face-api:', err);
+        toast('⚠️ Gagal memuat model pengenalan wajah. Cek koneksi internet.', 6000);
+        throw err;
+    }
+}
+
+async function startCam() {
+    if (!faceEnrolled) {
+        toast('⚠️ Wajah Anda belum terdaftar. Hubungi HRD.', 5000);
+        return;
+    }
+    if (stream) return;
+
+    try {
+        await loadFaceModels();
+
         stream = await navigator.mediaDevices.getUserMedia({
             video: { width:{ideal:1280}, height:{ideal:720}, facingMode:'user' },
             audio: false
@@ -729,8 +749,8 @@ async function startCam() {
         document.getElementById('vdot').className = 'v-dot scan';
         document.getElementById('vtxt').textContent = 'Detecting Face…';
 
-        faceTimer = setTimeout(detectFace, 1800);
         startGeo();
+        startFaceDetectionLoop();
 
     } catch(err) {
         console.error('Camera error:', err.name, err.message);
@@ -752,16 +772,69 @@ async function startCam() {
     }
 }
 
+function startFaceDetectionLoop() {
+    const video = document.getElementById('cam-video');
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+
+    detectionInterval = setInterval(async () => {
+        if (!video || video.readyState !== 4) return;
+
+        try {
+            const result = await faceapi
+                .detectSingleFace(video, options)
+                .withFaceLandmarks(true)
+                .withFaceDescriptor();
+
+            if (result) {
+                if (!faceDetected) {
+                    faceDetected = true;
+                    setStatus('sd-face','st-face','Face detected ✓','#86efac');
+                    setVerify('vi-face','👤','✅','ok','Detected');
+                }
+                currentDescriptor = Array.from(result.descriptor);
+                checkIdentityMatch();
+            } else {
+                if (faceDetected) {
+                    faceDetected = false;
+                    faceMatched = false;
+                    currentDescriptor = null;
+                    setStatus('sd-face','st-face','No face','');
+                    setVerify('vi-face','👤','👤','pend','Pending');
+                    setStatus('sd-match','st-match','Identity pending','');
+                    setVerify('vi-match','🪪','🪪','pend','Pending');
+                    document.getElementById('vdot').className = 'v-dot scan';
+                    document.getElementById('vtxt').textContent = 'Detecting Face…';
+                }
+            }
+            updateBtns();
+        } catch (e) {
+            console.error('Detection error:', e);
+        }
+    }, 700);
+}
+
+function checkIdentityMatch() {
+    if (!currentDescriptor) return;
+
+    faceMatched = true;
+    setStatus('sd-match','st-match','Face captured','#86efac');
+    setVerify('vi-match','🪪','✅','ok','Ready');
+    document.getElementById('vdot').className = 'v-dot ok';
+    document.getElementById('vtxt').textContent = 'Face & Location Ready ✓';
+}
+
 function stopCam() {
     if (stream) { stream.getTracks().forEach(t=>t.stop()); stream = null; }
-    if (faceTimer) { clearTimeout(faceTimer); faceTimer = null; }
+    if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
     const v = document.getElementById('cam-video');
     v.srcObject = null; v.style.display = 'none';
     faceDetected = false;
+    faceMatched  = false;
+    currentDescriptor = null;
     document.getElementById('cam-ph').style.display = 'flex';
     document.getElementById('cam-ph').innerHTML = `
         <div class="cam-ph-icon">📷</div>
-        <p>Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
+        <p id="cam-ph-text">Click <strong>Start Camera</strong> to activate<br>face &amp; location verification</p>
         <button class="btn-start-inner" onclick="startCam()">
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" stroke-width="2"/>
@@ -770,30 +843,19 @@ function stopCam() {
             Start Camera
         </button>`;
     document.getElementById('scan-line').classList.remove('on');
-    document.getElementById('face-box').classList.remove('show');
     document.getElementById('btn-start').style.display = 'flex';
     document.getElementById('btn-stop').style.display  = 'none';
     document.getElementById('cam-state-txt').textContent = '● Camera Off';
     document.getElementById('cam-state-txt').style.color = '';
     setStatus('sd-cam','st-cam','Camera off','');
     setStatus('sd-face','st-face','No face','');
+    setStatus('sd-match','st-match','Identity pending','');
     setVerify('vi-cam','📷','📷','pend','Pending');
     setVerify('vi-face','👤','👤','pend','Pending');
+    setVerify('vi-match','🪪','🪪','pend','Pending');
     document.getElementById('vdot').className = 'v-dot';
     document.getElementById('vtxt').textContent = 'Face and Location Detection Verification';
     updateBtns();
-}
-
-function detectFace() {
-    faceDetected = true;
-    const box = document.getElementById('face-box');
-    box.style.cssText += 'top:14%;left:27%;width:46%;height:68%;';
-    box.classList.add('show');
-    setStatus('sd-face','st-face','Face detected ✓','#86efac');
-    setVerify('vi-face','👤','✅','ok','Detected');
-    document.getElementById('vdot').className = 'v-dot ok';
-    document.getElementById('vtxt').textContent = 'Face & Location Verified ✓';
-    evaluateReady();
 }
 
 function setStatus(dotId, txtId, msg, color) {
@@ -806,10 +868,9 @@ function setVerify(prefix, oldIco, newIco, cls, stTxt) {
     i.className='vi-ico '+cls; i.textContent=newIco;
     s.className='vi-st '+cls; s.textContent=stTxt;
 }
-function evaluateReady() { updateBtns(); }
 function updateBtns() {
     const ci=document.getElementById('btn-ci'), co=document.getElementById('btn-co');
-    const rdy = faceDetected && locOK;
+    const rdy = faceDetected && locOK && currentDescriptor !== null;
     if (typeof checkedOut !== 'undefined' && checkedOut) { ci.disabled=true; co.disabled=true; }
     else if (typeof checkedIn !== 'undefined' && checkedIn) { ci.disabled=true; co.disabled=!rdy; }
     else { ci.disabled=!rdy; co.disabled=true; }
@@ -823,25 +884,27 @@ function capturePhoto() {
 }
 
 function doCheckIn() {
-    if (!faceDetected) { toast('⚠️ No face detected. Face the camera.'); return; }
+    if (!faceDetected || !currentDescriptor) { toast('⚠️ No face detected. Face the camera.'); return; }
     if (!locOK)        { toast('⚠️ Location not ready. Please wait.');   return; }
     const p = capturePhoto();
-    document.getElementById('ci-lat').value   = userLat||'';
-    document.getElementById('ci-lng').value   = userLng||'';
-    document.getElementById('ci-addr').value  = userAddr||'';
-    document.getElementById('ci-photo').value = p;
-    toast('⏳ Recording check-in…');
+    document.getElementById('ci-lat').value        = userLat||'';
+    document.getElementById('ci-lng').value         = userLng||'';
+    document.getElementById('ci-addr').value        = userAddr||'';
+    document.getElementById('ci-photo').value       = p;
+    document.getElementById('ci-descriptor').value  = JSON.stringify(currentDescriptor);
+    toast('⏳ Memverifikasi wajah & merekam check-in…');
     document.getElementById('ci-form').submit();
 }
 function doCheckOut() {
-    if (!faceDetected) { toast('⚠️ No face detected. Face the camera.'); return; }
+    if (!faceDetected || !currentDescriptor) { toast('⚠️ No face detected. Face the camera.'); return; }
     if (!locOK)        { toast('⚠️ Location not ready. Please wait.');   return; }
     const p = capturePhoto();
-    document.getElementById('co-lat').value   = userLat||'';
-    document.getElementById('co-lng').value   = userLng||'';
-    document.getElementById('co-addr').value  = userAddr||'';
-    document.getElementById('co-photo').value = p;
-    toast('⏳ Recording check-out…');
+    document.getElementById('co-lat').value        = userLat||'';
+    document.getElementById('co-lng').value         = userLng||'';
+    document.getElementById('co-addr').value        = userAddr||'';
+    document.getElementById('co-photo').value       = p;
+    document.getElementById('co-descriptor').value  = JSON.stringify(currentDescriptor);
+    toast('⏳ Memverifikasi wajah & merekam check-out…');
     document.getElementById('co-form').submit();
 }
 

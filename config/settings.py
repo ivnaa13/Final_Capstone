@@ -5,14 +5,10 @@ Django settings for config project (Final Capstone).
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-4l&w^7e(h+(9_r6)m=*c3i29b)3869r287d-7^f2pcfwql9xi!'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -26,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django_recaptcha',
     'employee',
     'hrd',
 ]
@@ -45,7 +42,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], 
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -81,15 +78,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'Asia/Jakarta'
-
 USE_I18N = True
-
 USE_TZ = True
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static'] 
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -97,5 +91,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL             = '/login/'
-LOGIN_REDIRECT_URL    = '/dashboard/' 
+LOGIN_REDIRECT_URL    = '/dashboard/'
 LOGOUT_REDIRECT_URL   = '/login/'
+
+# ===== reCAPTCHA v2 =====
+# ===== reCAPTCHA v2 =====
+RECAPTCHA_PUBLIC_KEY = '6Lddt00tAAAAALY4EU8cyc9WAdWLj9MYFqNm-8DX'
+RECAPTCHA_PRIVATE_KEY = '6Lddt00tAAAAAN5_rnrdFmigdtoRXcGamTSYzaTA'
+# ===== Fonnte WhatsApp OTP =====
+FONNTE_TOKEN = 'aoUuBCGJubekjcSYehri'
+FONNTE_API_URL = 'https://api.fonnte.com/send'

@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — HR System</title>
+    <title>Verifikasi OTP — HR System</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,6 +18,7 @@
             --text:      #1e3a5f;
             --muted:     #7a8fa6;
             --red:       #e74c3c;
+            --green:     #16a34a;
             --font:      'Plus Jakarta Sans', sans-serif;
         }
 
@@ -51,9 +51,14 @@
             width: 100%;
             max-width: 360px;
             border: 2px solid #4a7ab5;
+            text-align: center;
         }
 
         .card-header { text-align: center; margin-bottom: 28px; }
+        .card-header .icon {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
         .card-header h1 {
             font-size: 1.2rem;
             font-weight: 700;
@@ -62,13 +67,14 @@
             text-transform: uppercase;
             margin-bottom: 6px;
         }
-        .card-header p { font-size: .8rem; color: var(--muted); }
+        .card-header p { font-size: .8rem; color: var(--muted); line-height: 1.5; }
 
         .alert-box {
             border-radius: 8px;
             padding: 10px 14px;
             margin-bottom: 18px;
             font-size: .8rem;
+            text-align: left;
         }
         .alert-box ul { list-style: none; }
         .alert-error {
@@ -83,8 +89,14 @@
             color: #1e40af;
         }
         .alert-info li::before { content: 'ℹ '; }
+        .alert-success {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            color: var(--green);
+        }
+        .alert-success li::before { content: '✓ '; }
 
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 16px; text-align: left; }
         .form-label {
             display: block;
             font-size: .82rem;
@@ -100,38 +112,24 @@
             border: none;
             border-bottom: 1.5px solid var(--border);
             color: var(--text);
-            padding: 9px 32px 9px 0;
-            font-size: .88rem;
+            padding: 9px 8px 9px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
             font-family: var(--font);
             outline: none;
             transition: border-color .2s;
+            text-align: center;
+            letter-spacing: 10px;
         }
         .form-control:focus { border-bottom-color: var(--navy); }
-        .form-control::placeholder { color: #b8c8d8; }
+        .form-control::placeholder { color: #b8c8d8; letter-spacing: 10px; }
 
-        .toggle-pw {
-            position: absolute; right: 0; top: 50%;
-            transform: translateY(-50%);
-            background: none; border: none;
-            cursor: pointer; color: var(--muted);
-            font-size: .78rem; padding: 4px;
-        }
-
-        /* ===== reCAPTCHA wrapper ===== */
-        .captcha-group {
-            margin: 20px 0 10px;
-            display: flex;
-            justify-content: center;
-            transform: scale(0.92);
-            transform-origin: center;
-        }
-        .captcha-error {
+        .field-error {
             color: var(--red);
             font-size: .75rem;
-            text-align: center;
-            margin-top: -6px;
-            margin-bottom: 10px;
+            margin-top: 6px;
             list-style: none;
+            text-align: center;
         }
 
         .btn-login {
@@ -159,17 +157,20 @@
             color: var(--muted);
             line-height: 1.6;
         }
-        .info-text span {
+        .info-text a {
             display: inline-block;
             margin-top: 4px;
             background: #f0f4f8;
             border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 4px 12px;
-            font-size: .72rem;
+            padding: 6px 14px;
+            font-size: .75rem;
             color: var(--navy);
             font-weight: 600;
+            text-decoration: none;
+            transition: background .2s;
         }
+        .info-text a:hover { background: #e2e9f2; }
     </style>
 </head>
 <body>
@@ -178,73 +179,42 @@
     <div class="login-card">
 
         <div class="card-header">
-            <h1>Welcome GARUDA TV</h1>
-            <p>Sign in to your System account</p>
+            <div class="icon">📱</div>
+            <h1>Verifikasi OTP</h1>
+            <p>Masukkan kode 6 digit yang<br>dikirim ke WhatsApp Anda</p>
         </div>
-
-        {% if form.non_field_errors %}
-        <div class="alert-box alert-error">
-            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
-        </div>
-        {% endif %}
 
         {% if messages %}
-        <div class="alert-box alert-info">
+        <div class="alert-box {% for m in messages %}{% if 'error' in m.tags %}alert-error{% elif 'success' in m.tags %}alert-success{% else %}alert-info{% endif %}{% endfor %}">
             <ul>{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>
         </div>
         {% endif %}
 
-        <form method="post" action="{% url 'login' %}">
+        <form method="post">
             {% csrf_token %}
-            <input type="hidden" name="next" value="{{ next }}">
 
             <div class="form-group">
-                <label class="form-label">Username</label>
+                <label class="form-label">Kode OTP</label>
                 <div class="input-wrap">
-                    <input type="text" name="username" class="form-control"
-                           placeholder="Enter your username"
-                           value="{{ form.username.value|default:'' }}"
-                           required autofocus>
+                    {{ form.otp_code }}
                 </div>
+                {% if form.otp_code.errors %}
+                    <ul class="field-error">
+                        {% for e in form.otp_code.errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <div class="input-wrap">
-                    <input type="password" name="password" id="pw-input"
-                           class="form-control" placeholder="••••••••" required>
-                    <button type="button" class="toggle-pw" id="toggle-pw">👁</button>
-                </div>
-            </div>
-
-            <!-- ===== CAPTCHA ===== -->
-            <div class="captcha-group">
-                {{ form.captcha }}
-            </div>
-            {% if form.captcha.errors %}
-                <ul class="captcha-error">
-                    {% for e in form.captcha.errors %}<li>{{ e }}</li>{% endfor %}
-                </ul>
-            {% endif %}
-
-            <button type="submit" class="btn-login">Sign In</button>
+            <button type="submit" class="btn-login">Verifikasi</button>
         </form>
+
         <div class="info-text">
-            Don't have an account?<br>
-            <span>Contact your IT Administrator</span>
+            Tidak menerima kode?<br>
+            <a href="{% url 'otp-resend' %}">Kirim Ulang OTP</a>
         </div>
 
     </div>
 </div>
-
-<script>
-    const pwInput  = document.getElementById('pw-input');
-    const togglePw = document.getElementById('toggle-pw');
-    togglePw.addEventListener('click', () => {
-        pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
-        togglePw.textContent = pwInput.type === 'password' ? '👁' : '🙈';
-    });
-</script>
 
 </body>
 </html>

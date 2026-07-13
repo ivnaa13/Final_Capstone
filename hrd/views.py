@@ -417,7 +417,7 @@ def create_employee(request):
                 messages.warning(request, "Format tanggal bergabung tidak valid, diabaikan.")
 
         Profile.objects.update_or_create(user=user, defaults=profile_data)
-        messages.success(request, f"Karyawan '{first_name} {last_name}' (@{username}) berhasil dibuat.")
+        messages.success(request, f"Karyawan '{first_name} {last_name}' (@{username}) berhasil dibuat. Karyawan perlu login dan mendaftarkan wajahnya sendiri melalui halaman Profil sebelum bisa absen.")
         return redirect('hrd-employees')
 
     return render(request, 'hrd/form add manage.html', {'form_data': {}})
@@ -454,6 +454,13 @@ def edit_employee(request, user_id):
                 profile.join_date = date.fromisoformat(join_date)
             except ValueError:
                 messages.warning(request, "Format tanggal bergabung tidak valid, diabaikan.")
+
+        # ===== Update face descriptor kalau ada rekam ulang =====
+        face_descriptor = request.POST.get('face_descriptor', '').strip()
+        if face_descriptor:
+            profile.face_descriptor = face_descriptor
+        # ===== END =====
+
         profile.save()
 
         messages.success(request, f"{employee.get_full_name()} berhasil diperbarui.")

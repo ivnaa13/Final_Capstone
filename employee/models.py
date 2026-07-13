@@ -2,11 +2,15 @@
 models.py  —  employee app
 """
 import base64
+import random
 import uuid
+from datetime import timedelta
 from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+
 
 def _save_b64_photo(b64_string: str, upload_to: str) -> "str | None":
     """Simpan foto base64 ke disk, kembalikan path relatif."""
@@ -25,6 +29,7 @@ def _save_b64_photo(b64_string: str, upload_to: str) -> "str | None":
         return str(rel_path)
     except Exception:
         return None
+
 
 class Employee(models.Model):
 
@@ -58,12 +63,14 @@ class Employee(models.Model):
 
     class Meta:
         db_table            = "employee"
-        managed             = False        
+        managed             = False
         verbose_name        = 'Employee'
         verbose_name_plural = 'Employees'
 
     def __str__(self):
         return f"{self.full_name} ({self.employee_id})"
+
+
 class Profile(models.Model):
     ROLE_CHOICES = (
         ('hrd',      'HRD'),
@@ -94,6 +101,11 @@ class Profile(models.Model):
     employee_code = models.CharField(max_length=50, blank=True, unique=True, null=True)
     npwp          = models.CharField(max_length=30, blank=True)
 
+    face_descriptor = models.TextField(
+        blank=True, null=True,
+        help_text="128-dimensi face descriptor (JSON array) dari face-api.js — dipakai untuk verifikasi wajah saat absen"
+    )
+
     class Meta:
         verbose_name        = 'Profile'
         verbose_name_plural = 'Profiles'
@@ -109,6 +121,35 @@ class Profile(models.Model):
             self.department    = self.employee.organization
             self.join_date     = self.employee.join_date
 
+
+class LoginOTP(models.Model):
+    """OTP sementara untuk proses login (2FA via WhatsApp)"""
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_otps')
+    code       = models.CharField(max_length=6)
+    is_used    = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expired_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name        = 'Login OTP'
+        verbose_name_plural = 'Login OTPs'
+
+    def save(self, *args, **kwargs):
+        if not self.expired_at:
+            self.expired_at = timezone.now() + timedelta(minutes=5)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        return (not self.is_used) and (timezone.now() <= self.expired_at)
+
+    @staticmethod
+    def generate_code():
+        return str(random.randint(100000, 999999))
+
+    def __str__(self):
+        return f"OTP {self.code} — {self.user.username}"
+
+
 class Attendance(models.Model):
     STATUS_CHOICES = (
         ('present', 'Present'),
@@ -123,7 +164,7 @@ class Attendance(models.Model):
     )
 
     user     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
-    employee = models.ForeignKey(         
+    employee = models.ForeignKey(
         Employee,
         on_delete=models.SET_NULL,
         null=True,
@@ -194,6 +235,8 @@ class Attendance(models.Model):
         path = _save_b64_photo(b64, 'attendance/checkout')
         if path:
             self.photo_checkout = path
+
+
 class Leave(models.Model):
     LEAVE_TYPE_CHOICES = (
         ('sick',      'Sick Leave'),
@@ -237,18 +280,12 @@ class Leave(models.Model):
     @property
     def duration_days(self) -> int:
         return (self.end_date - self.start_date).days + 1
+
+
 class Payroll(models.Model):
     """
     Mirror tabel 'payroll' di database.
     managed = False  →  Django TIDAK membuat/mengubah tabel ini.
-
-    Perhitungan overtime:
-      - Lebih dari 10 jam di hari kerja          → Rp 35.000 / sesi
-      - Masuk hari libur/cuti bersama ≥ 5 jam   → Rp 100.000 / sesi
-
-    Formula:
-      gross_salary = basic_salary + overtime_pay + allowance
-      net_salary   = gross_salary - deduction - late_penalty
     """
 
     STATUS_CHOICES = (
@@ -294,7 +331,7 @@ class Payroll(models.Model):
 
     class Meta:
         db_table  = 'payroll'
-        managed   = False       
+        managed   = False
         ordering  = ['-period_end', 'employee__full_name']
         verbose_name        = 'Payroll'
         verbose_name_plural = 'Payrolls'
@@ -305,12 +342,12 @@ class Payroll(models.Model):
 
     @property
     def total_salary(self) -> float:
-        """Alias untuk net_salary (kompatibilitas template)."""
         return float(self.net_salary or 0)
 
     @property
     def period_label(self) -> str:
         return f"{self.period_start.strftime('%d %b %Y')} – {self.period_end.strftime('%d %b %Y')}"
+
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
