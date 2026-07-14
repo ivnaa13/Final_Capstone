@@ -11,7 +11,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'full_name', 'organization', 'job_position', 'status_employee')
+    list_display = ('employee_id', 'full_name', 'organization', 'job_position', 'employee_status')
     search_fields = ('employee_id', 'full_name')
 
 

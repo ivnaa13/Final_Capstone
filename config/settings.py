@@ -60,11 +60,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Final_Capstone',
+        'NAME': 'attendance_db',
         'USER': 'postgres',
-        'PASSWORD': '132005',
+        'PASSWORD': '222222',
         'HOST': 'localhost',
-        'PORT': '5433',
+        'PORT': '5432',
     }
 }
 

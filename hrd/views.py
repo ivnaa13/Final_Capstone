@@ -6,6 +6,7 @@ from collections import defaultdict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from types import SimpleNamespace
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Count, Sum
@@ -277,12 +278,54 @@ def dashboard(request):
     pie_labels = [d['employee__organization'] or 'Unknown' for d in dept_qs]
     pie_values = [d['total'] for d in dept_qs]
 
-    recent_attendance = (
-        Attendance.objects
-        .filter(date__lte=today)
-        .select_related('employee')
-        .order_by('-date', 'employee__full_name')[:50]
-    )
+    # Build a list that contains one "recent attendance" record per employee profile.
+    # If an employee has no attendance record, include a placeholder with status 'absent'.
+    recent_attendance = []
+    profiles = Profile.objects.filter(role='employee').select_related('user', 'employee')
+    for p in profiles:
+        user = p.user
+        emp = getattr(p, 'employee', None)
+
+        # fetch latest attendance for this user (if any)
+        att = (
+            Attendance.objects
+            .filter(user=user)
+            .order_by('-date', '-check_in')
+            .select_related('employee')
+            .first()
+        )
+
+        if att:
+            # ensure we expose an `employee` object with expected attributes used by the template
+            rec_emp = emp if emp is not None else SimpleNamespace(
+                full_name=(user.get_full_name() or user.username),
+                organization='',
+                employee_id='' 
+            )
+            rec = SimpleNamespace(
+                employee=rec_emp,
+                status=(att.status or '').lower(),
+                check_in=att.check_in,
+                check_out=att.check_out,
+                duration=att.duration,
+                date=att.date,
+            )
+        else:
+            rec_emp = emp if emp is not None else SimpleNamespace(
+                full_name=(user.get_full_name() or user.username),
+                organization='',
+                employee_id='' 
+            )
+            rec = SimpleNamespace(
+                employee=rec_emp,
+                status='absent',
+                check_in=None,
+                check_out=None,
+                duration=None,
+                date=None,
+            )
+
+        recent_attendance.append(rec)
 
     return render(request, 'hrd/dashboard.html', {
         'total_employees':   total_employees,
@@ -291,7 +334,9 @@ def dashboard(request):
         'late_today':        late_today,
         'today':             today,
         'today_str':         today.strftime('%d %B %Y'),
+        # Template expects `recent_attendances` (plural) in JS loop — provide both names for compatibility.
         'recent_attendance': recent_attendance,
+        'recent_attendances': recent_attendance,
         'bar_labels':        bar_labels,
         'bar_present':       bar_present,
         'bar_late':          bar_late,

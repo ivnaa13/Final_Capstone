@@ -46,7 +46,8 @@ class Employee(models.Model):
     employment_type = models.CharField(max_length=50, blank=True)
     employee_status = models.CharField(max_length=50, blank=True)
     end_date        = models.DateField(null=True, blank=True)
-    status_employee = models.CharField(max_length=50, blank=True)
+    # Note: original schema from some environments used a different column name.
+    # Keep only `employee_status` which matches the actual DB column.
 
     branch_name     = models.CharField(max_length=100, blank=True)
 

@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual env
+venv/
+.env
+.venv/
+
+# Django
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+media/*
+
+# IDE
+.vscode/
+.idea/
+
+# Mac / Windows
+.DS_Store
+Thumbs.db
+
+# Byte-compiled / distribution
+build/
+dist/
+*.egg-info/
+
+# Secrets
+*.key
+*.pem
+
+# node
+node_modules/
