@@ -1,12 +1,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>{% block title %}Dashboard{% endblock %}</title>
     {% load static %}
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     {% if request.user.is_authenticated and request.user.profile and request.user.profile.role == 'hrd' %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,138 +15,181 @@
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; }
+        html { font-size: clamp(15px, 2vw, 17px); -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+        img, svg { max-width: 100%; }
 
         /* ── EMPLOYEE ── */
+        /* Sidebar & topbar pakai biru cerah (bukan navy gelap), area konten (.main) beige/terang,
+           SAMA PERSIS dengan tema HRD di bawah supaya kedua POV konsisten.
+           Font diperbesar & dipertegas supaya lebih mudah dibaca, dan layout
+           responsif penuh untuk HP maupun laptop.
+           --sidebar-w pakai clamp() supaya otomatis menyempit di layar sempit
+           tanpa memotong/overflow teks menu. */
         body.pov-employee {
-            background: #0f1f38;
-            color: #e8f0fb;
+            background: #022e4c;
+            color: #ffffff;
 
-            --navy:        #0d1b35;
-            --navy-light:  #1a2e4a;
-            --navy-hover:  #1f3557;
-            --bg:          #112240;
-            --bg-content:  #0f1f38;
+            --navy:        #022e4c;
+            --navy-light:  #0f425f;
+            --navy-hover:  #517493;
+            --bg:          #022e4c;
+            --bg-content:  #022e4c;
 
             --white:       #ffffff;
-            --border:      rgba(255,255,255,0.08);
+            --border:      rgba(255,255,255,0.16);
 
-            --text:        #e8f0fb;
-            --muted:       #8aaac8;
-            --faint:       #4d6a8a;
+            --text:        #ffffff;
+            --muted:       #cfe0ec;
+            --faint:       #9fbdd1;
 
-            --accent:      #3b82f6;
-            --accent-light:#60a5fa;
-            --accent-glow: rgba(59,130,246,0.20);
+            --accent:      #517493;
+            --accent-light:#6f8fac;
+            --accent-glow: rgba(81,116,147,0.30);
+            --accent2:     #56061d;
+            --accent2-light: #7a1e3a;
 
             --green:  #16a34a;
             --red:    #dc2626;
             --yellow: #d97706;
 
-            --sidebar-w:  220px;
-            --topbar-h:   54px;
+            --sidebar-w:  clamp(216px, 68vw, 256px);
+            --topbar-h:   64px;
 
             --transition: 0.25s ease;
+
+            /* ── area konten: NAVY GELAP, sama seperti sidebar/topbar,
+               supaya senada dengan panel admin. Teks jadi terang. ── */
+            --content-bg:     #022e4c;
+            --card-bg:        #0f3a56;
+            --card-hover:     #14415f;
+            --content-text:   #ffffff;
+            --content-muted:  #a9c2d6;
+            --content-faint:  #7f9bb0;
+            --content-border: rgba(255,255,255,0.14);
+            --input-bg:       #0f3a56;
         }
 
         body.pov-employee .show-btn {
             position: fixed; top: 0; left: 0; height: var(--topbar-h);
-            padding: 0 18px;
-            background: var(--navy);
+            padding: 0 20px;
+            background: linear-gradient(180deg, var(--navy), var(--navy-light));
             border: none;
-            border-right: 1px solid rgba(255,255,255,0.07);
-            color: rgba(255,255,255,.85);
-            font-size: .82rem; font-weight: 600;
+            border-right: 1px solid rgba(255,255,255,0.14);
+            color: rgba(255,255,255,.92);
+            font-size: 1rem; font-weight: 700;
             font-family: inherit; cursor: pointer;
             display: none;
-            align-items: center; gap: 8px; z-index: 400;
+            align-items: center; gap: 8px; z-index: 600;
             transition: background var(--transition), color var(--transition);
         }
-        body.pov-employee .show-btn:hover { color: #fff; background: var(--navy-light); }
+        body.pov-employee .show-btn:hover { color: #fff; background: var(--navy-hover); }
+
+        body.pov-employee .sidebar-backdrop {
+            display: none;
+        }
 
         body.pov-employee .sidebar {
             width: var(--sidebar-w);
             min-height: 100vh;
-            background: var(--navy);
+            background: linear-gradient(180deg, var(--navy) 0%, var(--navy-light) 100%);
             position: fixed; top: 0; left: 0; bottom: 0;
             display: flex; flex-direction: column;
-            z-index: 200;
+            z-index: 500;
             transition: transform .3s ease;
-            border-right: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.10);
         }
         body.pov-employee .sidebar.hidden { transform: translateX(-100%); }
 
-        body.pov-employee .sidebar-top { padding: 0 14px; flex: 1; }
+        body.pov-employee .sidebar-top {
+            padding: 0 14px; flex: 1;
+            overflow-y: auto;
+        }
 
         body.pov-employee .hide-menu-btn {
             display: flex; align-items: center; gap: 8px;
-            padding: 16px 4px 14px;
+            padding: 18px 4px 16px;
             color: var(--text);
-            font-size: .82rem; font-weight: 600;
+            font-size: .95rem; font-weight: 700;
             cursor: pointer; border: none; background: none;
             font-family: inherit;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            width: 100%; margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            width: 100%; margin-bottom: 12px;
             letter-spacing: .3px;
             transition: color var(--transition);
         }
         body.pov-employee .hide-menu-btn:hover { color: #fff; }
 
+        /* Nav item: gap & padding dirapatkan, teks dibungkus <span> yang boleh
+           menyusut (flex:1;min-width:0) supaya kalau tetap kurang muat, teks
+           dipotong rapi dengan ellipsis (...) — bukan meluber keluar pill. */
         body.pov-employee .nav-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 11px 16px;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.10);
+            display: flex; align-items: center; gap: 11px;
+            padding: 13px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.16);
             color: var(--text);
             text-decoration: none;
-            font-size: .85rem; font-weight: 500;
-            margin-bottom: 6px;
-            white-space: nowrap;
+            font-size: .92rem; font-weight: 600;
+            margin-bottom: 8px;
             transition: background var(--transition), border-color var(--transition), color var(--transition);
         }
+        body.pov-employee .nav-item span {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         body.pov-employee .nav-item:hover {
-            background: rgba(255,255,255,0.12);
-            border-color: rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.20);
+            border-color: rgba(255,255,255,0.28);
             color: #fff;
         }
-        body.pov-employee .nav-item:hover .nav-icon { opacity: 1; color: var(--accent-light); stroke: var(--accent-light); }
+        body.pov-employee .nav-item:hover .nav-icon { opacity: 1; color: var(--accent2-light); stroke: var(--accent2-light); }
         body.pov-employee .nav-item.active {
-            background: rgba(255,255,255,0.18);
-            border-color: rgba(59,130,246,0.35);
+            background: rgba(255,255,255,0.24);
+            border-color: rgba(86,6,29,0.55);
+            border-left: 4px solid var(--accent2);
             color: #fff;
         }
-        body.pov-employee .nav-item.active .nav-icon { opacity: 1; stroke: var(--accent-light); }
+        body.pov-employee .nav-item.active .nav-icon { opacity: 1; stroke: var(--accent2-light); }
 
         body.pov-employee .nav-icon {
-            width: 18px; height: 18px; flex-shrink: 0;
-            opacity: .75;
+            width: 20px; height: 20px; flex-shrink: 0;
+            opacity: .85;
             transition: opacity var(--transition), stroke var(--transition);
         }
 
         body.pov-employee .sidebar-bottom {
-            padding: 12px 14px 20px;
-            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 14px 14px 22px;
+            border-top: 1px solid rgba(255,255,255,0.14);
         }
 
         body.pov-employee .logout-link {
-            display: flex; align-items: center; gap: 12px;
-            padding: 11px 16px;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.10);
+            display: flex; align-items: center; gap: 11px;
+            padding: 13px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.16);
             color: var(--muted);
             text-decoration: none;
-            font-size: .85rem; font-weight: 500;
+            font-size: .92rem; font-weight: 600;
             width: 100%;
             cursor: pointer;
             font-family: inherit;
             transition: background var(--transition), border-color var(--transition), color var(--transition);
         }
         body.pov-employee .logout-link:hover {
-            background: rgba(220,38,38,0.15);
-            border-color: rgba(220,38,38,0.3);
-            color: #fca5a5;
+            background: rgba(220,38,38,0.20);
+            border-color: rgba(220,38,38,0.35);
+            color: #fecaca;
         }
 
         body.pov-employee .topbar {
@@ -155,113 +198,124 @@
             height: var(--topbar-h);
             background: var(--bg);
             display: flex; align-items: center; justify-content: flex-end;
-            padding: 0 24px;
+            padding: 0 28px;
             z-index: 100;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.10);
             transition: left .3s ease;
         }
         body.pov-employee .topbar.full { left: 0; }
 
-        body.pov-employee .topbar-right { display: flex; align-items: center; gap: 12px; }
+        body.pov-employee .topbar-right { display: flex; align-items: center; gap: 14px; }
 
         body.pov-employee .user-name {
-            font-size: .82rem;
-            color: rgba(255,255,255,.85);
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            max-width: 40vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         body.pov-employee .user-avatar {
-            width: 34px; height: 34px;
-            background: var(--accent);
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
             border-radius: 50%;
             display: grid; place-items: center;
-            font-size: .78rem; font-weight: 700;
+            font-size: .95rem; font-weight: 700;
             color: #fff;
             cursor: pointer; text-decoration: none;
-            border: 2px solid rgba(59,130,246,0.4);
+            border: 2px solid rgba(255,255,255,0.5);
             overflow: hidden;
+            flex-shrink: 0;
             transition: border-color var(--transition);
         }
-        body.pov-employee .user-avatar:hover { border-color: var(--accent-light); }
+        body.pov-employee .user-avatar:hover { border-color: #fff; }
 
         body.pov-employee .main {
             margin-left: var(--sidebar-w);
             margin-top: var(--topbar-h);
-            padding: 24px;
+            padding: 28px;
             min-height: calc(100vh - var(--topbar-h));
-            background: var(--bg);
+            background: var(--content-bg);
+            color: var(--content-text);
             transition: margin-left .3s ease;
+            overflow-x: hidden;
         }
         body.pov-employee .main.full { margin-left: 0; }
 
         body.pov-employee .card {
-            background: var(--navy-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--content-border);
+            border-radius: 14px;
+            padding: 22px 26px;
         }
         body.pov-employee .card-hdr {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--content-border);
             display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 10px;
         }
-        body.pov-employee .card-hdr h3 { font-size: .88rem; font-weight: 700; color: var(--text); }
-        body.pov-employee .card-body { padding: 18px; }
+        body.pov-employee .card-hdr h3 { font-size: 1.05rem; font-weight: 700; color: var(--content-text); }
+        body.pov-employee .card-body { padding: 20px; }
 
         body.pov-employee .stat-card {
-            background: var(--navy-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 18px;
+            background: var(--card-bg);
+            border: 1px solid var(--content-border);
+            border-radius: 14px;
+            padding: 18px 20px;
             transition: background var(--transition);
         }
-        body.pov-employee .stat-card:hover { background: var(--navy-hover); }
+        body.pov-employee .stat-card:hover { background: var(--card-hover); }
 
         body.pov-employee .stat-label {
-            font-size: .7rem; font-weight: 600;
-            color: var(--muted);
+            font-size: .82rem; font-weight: 700;
+            color: var(--content-muted);
             text-transform: uppercase; letter-spacing: .5px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         body.pov-employee .stat-value {
-            font-size: 1.8rem; font-weight: 700;
-            color: var(--text); line-height: 1;
+            font-size: 2.1rem; font-weight: 800;
+            color: var(--content-text); line-height: 1;
         }
 
         body.pov-employee .badge {
-            display: inline-block; padding: 3px 10px;
+            display: inline-block; padding: 5px 14px;
             border-radius: 20px;
-            font-size: .72rem; font-weight: 600;
+            font-size: .85rem; font-weight: 700;
         }
-        body.pov-employee .badge-green  { background: rgba(22,163,74,0.2);  color: #86efac; }
-        body.pov-employee .badge-red    { background: rgba(220,38,38,0.2);  color: #fca5a5; }
-        body.pov-employee .badge-yellow { background: rgba(217,119,6,0.2);  color: #fcd34d; }
-        body.pov-employee .badge-blue   { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        body.pov-employee .badge-gray   { background: rgba(255,255,255,0.08); color: var(--muted); }
+        body.pov-employee .badge-green  { background: rgba(22,163,74,0.20);  color: #4ade80; }
+        body.pov-employee .badge-red    { background: rgba(220,38,38,0.20);  color: #f87171; }
+        body.pov-employee .badge-yellow { background: rgba(245,158,11,0.22); color: #fbbf24; }
+        body.pov-employee .badge-blue   { background: rgba(81,116,147,0.25); color: #9fc3dd; }
+        body.pov-employee .badge-gray   { background: rgba(255,255,255,0.12); color: var(--content-muted); }
 
-        body.pov-employee .table-wrap { overflow-x: auto; }
-        body.pov-employee table { width: 100%; border-collapse: collapse; }
+        body.pov-employee .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        body.pov-employee table { width: 100%; border-collapse: collapse; min-width: 480px; }
         body.pov-employee th {
-            text-align: left; font-size: .72rem; font-weight: 700;
-            letter-spacing: .4px; color: var(--muted);
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border);
-            background: rgba(255,255,255,0.03);
+            text-align: left; font-size: .82rem; font-weight: 800;
+            letter-spacing: .4px; color: var(--content-muted);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--content-border);
+            background: rgba(255,255,255,0.04);
+            white-space: nowrap;
         }
         body.pov-employee td {
-            padding: 11px 14px; font-size: .83rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            color: var(--text);
+            padding: 13px 16px; font-size: .95rem;
+            border-bottom: 1px solid var(--content-border);
+            color: var(--content-text);
         }
         body.pov-employee tr:last-child td { border-bottom: none; }
         body.pov-employee tr:hover td { background: rgba(255,255,255,0.04); }
 
         body.pov-employee .btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 8px 18px; border-radius: 8px;
-            font-size: .83rem; font-weight: 600;
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            padding: 12px 20px; border-radius: 9px;
+            font-size: .95rem; font-weight: 700;
             font-family: inherit; cursor: pointer; border: none;
             text-decoration: none; transition: all .2s;
+            min-height: 44px;
         }
-        body.pov-employee .btn-primary { background: var(--accent); color: #fff; }
+        body.pov-employee .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff; }
         body.pov-employee .btn-primary:hover { background: var(--accent-light); }
         body.pov-employee .btn-success { background: #16a34a; color: #fff; }
         body.pov-employee .btn-success:hover { background: #15803d; }
@@ -269,33 +323,34 @@
         body.pov-employee .btn-danger:hover  { background: #b91c1c; }
         body.pov-employee .btn-outline {
             background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
+            border: 1.5px solid var(--content-border);
+            color: var(--content-text);
         }
         body.pov-employee .btn-outline:hover {
             border-color: var(--accent);
-            color: var(--accent-light);
+            color: var(--accent);
         }
 
-        body.pov-employee .form-group { margin-bottom: 16px; }
+        body.pov-employee .form-group { margin-bottom: 18px; }
         body.pov-employee .form-label {
-            display: block; font-size: .78rem; font-weight: 600;
-            color: var(--muted); margin-bottom: 6px;
+            display: block; font-size: .88rem; font-weight: 700;
+            color: var(--content-muted); margin-bottom: 7px;
             text-transform: uppercase; letter-spacing: .4px;
         }
         body.pov-employee .form-control {
             width: 100%;
-            background: #162033;
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 9px 12px; border-radius: 8px;
-            font-size: .87rem; font-family: inherit;
+            background: var(--input-bg);
+            border: 1.5px solid var(--content-border);
+            color: var(--content-text);
+            padding: 12px 14px; border-radius: 9px;
+            font-size: 1rem; font-family: inherit;
             outline: none;
+            min-height: 46px;
             transition: border-color .2s;
         }
         body.pov-employee .form-control:focus { border-color: var(--accent); }
-        body.pov-employee .form-control::placeholder { color: var(--faint); }
-        body.pov-employee textarea.form-control { resize: vertical; min-height: 80px; }
+        body.pov-employee .form-control::placeholder { color: var(--content-faint); }
+        body.pov-employee textarea.form-control { resize: vertical; min-height: 90px; }
 
         body.pov-employee .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
         body.pov-employee .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
@@ -303,35 +358,40 @@
 
         body.pov-employee .sum-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            font-size: .83rem;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--content-border);
+            font-size: .95rem;
+            gap: 10px;
         }
         body.pov-employee .sum-row:last-child { border-bottom: none; }
-        body.pov-employee .sum-label { color: var(--muted); }
-        body.pov-employee .sum-value { font-weight: 600; color: var(--text); }
+        body.pov-employee .sum-label { color: var(--content-muted); font-weight: 600; }
+        body.pov-employee .sum-value { font-weight: 700; color: var(--content-text); }
 
         body.pov-employee .page-hdr {
             display: flex; align-items: flex-start; justify-content: space-between;
-            margin-bottom: 24px;
+            margin-bottom: 26px;
+            flex-wrap: wrap; gap: 14px;
         }
-        body.pov-employee .page-hdr h1 { font-size: 1.3rem; font-weight: 700; color: var(--text); }
-        body.pov-employee .page-hdr p  { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+        body.pov-employee .page-hdr h1 { font-size: 1.6rem; font-weight: 800; color: var(--content-text); }
+        body.pov-employee .page-hdr p  { font-size: .95rem; font-weight: 500; color: var(--content-muted); margin-top: 5px; }
 
         body.pov-employee .messages { margin-bottom: 20px; }
         body.pov-employee .alert {
-            padding: 11px 16px; border-radius: 8px;
-            font-size: .83rem; margin-bottom: 8px; border: 1px solid;
+            padding: 13px 18px; border-radius: 9px;
+            font-size: .95rem; margin-bottom: 8px; border: 1px solid;
+            font-weight: 600;
         }
-        body.pov-employee .alert-success { background: rgba(22,163,74,0.15);  border-color: rgba(22,163,74,0.4);  color: #86efac; }
-        body.pov-employee .alert-error   { background: rgba(220,38,38,0.15);  border-color: rgba(220,38,38,0.4);  color: #fca5a5; }
-        body.pov-employee .alert-info    { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
-        body.pov-employee .alert-warning { background: rgba(217,119,6,0.15);  border-color: rgba(217,119,6,0.4);  color: #fcd34d; }
+        body.pov-employee .alert-success { background: rgba(22,163,74,0.14);  border-color: rgba(22,163,74,0.4);  color: #4ade80; }
+        body.pov-employee .alert-error   { background: rgba(220,38,38,0.14);  border-color: rgba(220,38,38,0.4);  color: #f87171; }
+        body.pov-employee .alert-info    { background: rgba(81,116,147,0.16); border-color: rgba(81,116,147,0.4); color: #9fc3dd; }
+        body.pov-employee .alert-warning { background: rgba(217,119,6,0.14);  border-color: rgba(217,119,6,0.4);  color: #fbbf24; }
 
-        body.pov-employee ::-webkit-scrollbar { width: 4px; height: 4px; }
+        body.pov-employee ::-webkit-scrollbar { width: 5px; height: 5px; }
         body.pov-employee ::-webkit-scrollbar-track { background: transparent; }
-        body.pov-employee ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-        body.pov-employee ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        body.pov-employee ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 4px; }
+        body.pov-employee ::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+        body.pov-employee .main ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+        body.pov-employee .main ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
         @media (max-width: 1100px) {
             body.pov-employee .grid-4 { grid-template-columns: repeat(2,1fr); }
@@ -341,146 +401,202 @@
             body.pov-employee .grid-2,
             body.pov-employee .grid-3,
             body.pov-employee .grid-4 { grid-template-columns: 1fr; }
-            body.pov-employee .main { padding: 16px 14px; }
+        }
+
+        /* ── EMPLOYEE: MOBILE (HP) ── */
+        @media (max-width: 900px) {
+            body.pov-employee .main { margin-left: 0 !important; padding: 18px 16px 32px; }
+            body.pov-employee .topbar { left: 0 !important; padding: 0 16px 0 66px; }
+            body.pov-employee .show-btn { display: flex !important; }
+            body.pov-employee .sidebar { box-shadow: 6px 0 28px rgba(0,0,0,0.30); }
+            body.pov-employee .sidebar-backdrop.active {
+                display: block;
+                position: fixed; inset: 0;
+                background: rgba(10,20,40,0.45);
+                z-index: 450;
+            }
+            body.pov-employee .page-hdr h1 { font-size: 1.35rem; }
+            body.pov-employee .stat-value { font-size: 1.75rem; }
+            body.pov-employee .card, body.pov-employee .stat-card { padding: 16px 18px; }
         }
 
         /* ── HRD ── */
+        /* Sidebar tetap biru cerah (SAMA seperti Employee), area konten
+           (topbar + page-content) beige/terang — identik dengan tema Employee
+           di atas supaya kedua POV konsisten satu sama lain.
+           Font diperbesar & dipertegas untuk keterbacaan, layout responsif
+           untuk HP maupun laptop.
+           --sidebar-width pakai clamp() (sama seperti Employee) supaya
+           teks menu seperti "Payroll Management" tidak overflow di layar
+           sempit / HP. */
         body.pov-hrd {
-            background: #0f1f38;
-            color: #e8f0fb;
+            background: #022e4c;
+            color: #ffffff;
             display: flex;
             overflow-x: hidden;
             font-family: 'Plus Jakarta Sans', sans-serif;
 
-            --sidebar-width: 240px;
-            --topbar-h: 54px;
+            --sidebar-width: clamp(216px, 68vw, 256px);
+            --topbar-h: 64px;
 
-            --bg-root:       #0f1f38;
-            --bg-sidebar:    #0a1628;
-            --bg-content:    #0f1f38;
-            --bg-card:       #132032;
-            --bg-card-hover: #1a2e4a;
-            --bg-input:      #0d1b30;
+            /* sidebar navy tegas, sama dengan --navy Employee */
+            --bg-sidebar:    #022e4c;
 
-            --nav-item-bg:        rgba(255,255,255,0.06);
-            --nav-item-bg-hover:  rgba(255,255,255,0.11);
-            --nav-item-bg-active: rgba(255,255,255,0.16);
-            --nav-item-border:    rgba(255,255,255,0.09);
+            /* area konten NAVY GELAP — sama seperti sidebar, senada dengan panel admin */
+            --bg-root:       #022e4c;
+            --bg-content:    #022e4c;
+            --bg-card:       #0f3a56;
+            --bg-card-hover: #14415f;
+            --bg-input:      #0f3a56;
 
-            --accent:        #3b82f6;
-            --accent-light:  #60a5fa;
-            --accent-glow:   rgba(59,130,246,0.20);
+            --nav-item-bg:        rgba(255,255,255,0.12);
+            --nav-item-bg-hover:  rgba(255,255,255,0.20);
+            --nav-item-bg-active: rgba(255,255,255,0.26);
+            --nav-item-border:    rgba(255,255,255,0.16);
 
-            --text-primary:  #e8f0fb;
-            --text-muted:    #8aaac8;
-            --text-faint:    #4d6a8a;
+            --accent:        #517493;
+            --accent-light:  #6f8fac;
+            --accent-glow:   rgba(81,116,147,0.30);
+            --accent2:       #56061d;
+            --accent2-light: #7a1e3a;
 
-            --border-card:   rgba(255,255,255,0.07);
-            --border-input:  rgba(255,255,255,0.10);
+            /* teks di area konten: putih untuk judul/angka,
+               abu-kebiruan terang untuk label/teks sekunder supaya tetap kebaca di atas navy */
+            --text-primary:  #ffffff;
+            --text-muted:    #a9c2d6;
+            --text-faint:    #7f9bb0;
+
+            --border-card:   rgba(255,255,255,0.14);
+            --border-input:  rgba(255,255,255,0.14);
 
             --transition: 0.25s ease;
+        }
+
+        body.pov-hrd #sidebar-backdrop {
+            display: none;
         }
 
         body.pov-hrd #sidebar {
             width: var(--sidebar-width);
             min-height: 100vh;
-            background: var(--bg-sidebar);
+            background: linear-gradient(180deg, var(--bg-sidebar) 0%, #0f425f 100%);
             position: fixed;
             top: 0; left: 0; bottom: 0;
             display: flex;
             flex-direction: column;
-            z-index: 300;
+            z-index: 500;
             transition: transform var(--transition), width var(--transition);
             overflow: hidden;
-            border-right: 1px solid rgba(255,255,255,0.04);
+            border-right: 1px solid rgba(255,255,255,0.08);
         }
         body.pov-hrd #sidebar.collapsed {
             transform: translateX(calc(-1 * var(--sidebar-width)));
+        }
+
+        /* Sidebar tetap pakai teks terang karena backgroundnya biru */
+        body.pov-hrd .sidebar-header,
+        body.pov-hrd .sidebar-nav,
+        body.pov-hrd .sidebar-footer {
+            color: #ffffff;
         }
 
         body.pov-hrd .sidebar-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 16px 18px 14px;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            margin-bottom: 10px;
+            padding: 18px 18px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            margin-bottom: 12px;
         }
         body.pov-hrd .sidebar-header-btn {
             background: none;
             border: none;
-            color: var(--text-primary);
+            color: #ffffff;
             font-family: inherit;
-            font-size: .82rem;
-            font-weight: 600;
+            font-size: .95rem;
+            font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: 8px;
             padding: 0;
             letter-spacing: .3px;
+            white-space: nowrap;
         }
         body.pov-hrd .sidebar-header-btn:hover { color: #fff; }
 
         body.pov-hrd .sidebar-nav {
             flex: 1;
-            padding: 4px 14px;
+            padding: 6px 14px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
             overflow-y: auto;
             overflow-x: hidden;
         }
+        /* Nav item HRD: gap & padding dirapatkan supaya label terpanjang
+           ("Payroll Management") tetap muat dalam satu baris di lebar
+           sidebar clamp() ini. Teks dibungkus <span> yang boleh menyusut
+           (min-width:0) dan dipotong dengan ellipsis kalau benar-benar
+           kurang ruang, bukan meluber keluar pill. */
         body.pov-hrd .sidebar-nav a {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 11px 16px;
-            border-radius: 10px;
+            gap: 10px;
+            padding: 13px 14px;
+            border-radius: 12px;
             background: var(--nav-item-bg);
             border: 1px solid var(--nav-item-border);
-            color: var(--text-primary);
+            color: #ffffff;
             text-decoration: none;
-            font-size: .85rem;
-            font-weight: 500;
-            white-space: nowrap;
+            font-size: .92rem;
+            font-weight: 600;
             transition: background var(--transition), border-color var(--transition), color var(--transition);
         }
         body.pov-hrd .sidebar-nav a i {
-            font-size: 17px;
+            font-size: 18px;
             min-width: 20px;
-            color: var(--text-muted);
+            flex-shrink: 0;
+            color: #dbe6ff;
             transition: color var(--transition);
+        }
+        body.pov-hrd .sidebar-nav a span {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         body.pov-hrd .sidebar-nav a:hover {
             background: var(--nav-item-bg-hover);
-            border-color: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.24);
             color: #fff;
         }
-        body.pov-hrd .sidebar-nav a:hover i { color: var(--accent-light); }
+        body.pov-hrd .sidebar-nav a:hover i { color: var(--accent2-light); }
         body.pov-hrd .sidebar-nav a.active {
             background: var(--nav-item-bg-active);
-            border-color: rgba(59,130,246,0.35);
+            border-color: rgba(86,6,29,0.55);
+            border-left: 4px solid var(--accent2);
             color: #fff;
         }
-        body.pov-hrd .sidebar-nav a.active i { color: var(--accent-light); }
+        body.pov-hrd .sidebar-nav a.active i { color: var(--accent2-light); }
 
         body.pov-hrd .sidebar-footer {
-            padding: 12px 14px 20px;
-            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 14px 14px 22px;
+            border-top: 1px solid rgba(255,255,255,0.14);
         }
 
         body.pov-hrd .hrd-logout-btn {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 11px 16px;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.10);
-            color: var(--text-muted);
-            font-size: .85rem;
-            font-weight: 500;
+            gap: 10px;
+            padding: 13px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: #dbe6ff;
+            font-size: .92rem;
+            font-weight: 600;
             white-space: nowrap;
             cursor: pointer;
             font-family: inherit;
@@ -488,38 +604,40 @@
             transition: background var(--transition), color var(--transition), border-color var(--transition);
         }
         body.pov-hrd .hrd-logout-btn:hover {
-            background: rgba(220,38,38,0.15);
-            border-color: rgba(220,38,38,0.3);
-            color: #fca5a5;
+            background: rgba(220,38,38,0.20);
+            border-color: rgba(220,38,38,0.35);
+            color: #fecaca;
         }
-        body.pov-hrd .hrd-logout-btn i { font-size: 17px; }
+        body.pov-hrd .hrd-logout-btn i { font-size: 18px; flex-shrink: 0; }
 
         body.pov-hrd .sidebar-toggle-btn {
             position: fixed;
             top: 0;
             left: 0;
-            width: 52px;
+            width: 56px;
             height: var(--topbar-h);
-            z-index: 400;
+            z-index: 600;
             background: transparent;
             border: none;
             color: var(--text-primary);
-            font-size: 20px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: color var(--transition);
+            transition: color var(--transition), left var(--transition);
         }
-        body.pov-hrd .sidebar-toggle-btn:hover { color: #fff; }
+        body.pov-hrd .sidebar-toggle-btn:hover { color: #ffffff; }
         body.pov-hrd .sidebar-toggle-btn.sidebar-open { left: var(--sidebar-width); }
 
         body.pov-hrd #main-wrapper {
             margin-left: var(--sidebar-width);
             flex: 1;
             min-height: 100vh;
+            width: 100%;
             display: flex;
             flex-direction: column;
+            background: var(--bg-root);
             transition: margin-left var(--transition);
         }
         body.pov-hrd #main-wrapper.expanded { margin-left: 0; }
@@ -530,79 +648,82 @@
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            padding: 0 20px 0 60px;
+            padding: 0 24px 0 64px;
             position: sticky;
             top: 0;
             z-index: 200;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            gap: 12px;
         }
         body.pov-hrd .topbar-actions {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         body.pov-hrd .topbar-icon-btn {
-            width: 36px;
-            height: 36px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.07);
-            color: var(--text-muted);
-            font-size: 16px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.10);
+            color: #ffffff;
+            font-size: 19px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             position: relative;
+            flex-shrink: 0;
             transition: background var(--transition), color var(--transition);
         }
         body.pov-hrd .topbar-icon-btn:hover {
-            background: rgba(255,255,255,0.13);
-            color: var(--text-primary);
+            background: rgba(255,255,255,0.20);
+            color: #fff;
         }
         body.pov-hrd .topbar-icon-btn.active {
-            background: rgba(59,130,246,0.2);
-            color: var(--accent-light);
-            border: 1px solid rgba(59,130,246,0.3);
+            background: rgba(86,6,29,0.22);
+            color: var(--accent2-light);
+            border: 1px solid rgba(86,6,29,0.45);
         }
         body.pov-hrd .notif-dot {
             position: absolute;
-            top: 6px; right: 6px;
-            width: 7px; height: 7px;
-            background: #ef4444;
+            top: 7px; right: 7px;
+            width: 9px; height: 9px;
+            background: #7a1e3a;
             border-radius: 50%;
-            border: 1.5px solid var(--bg-root);
+            border: 2px solid var(--bg-root);
         }
 
         body.pov-hrd .topbar-avatar {
-            width: 36px;
-            height: 36px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            background: var(--accent);
+            background: linear-gradient(135deg, var(--accent-light), var(--accent2));
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 15px;
+            font-size: 18px;
             cursor: pointer;
             overflow: hidden;
-            border: 2px solid rgba(59,130,246,0.4);
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.55);
             transition: border-color var(--transition);
         }
-        body.pov-hrd .topbar-avatar:hover { border-color: var(--accent-light); }
+        body.pov-hrd .topbar-avatar:hover { border-color: #fff; }
         body.pov-hrd .topbar-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         body.pov-hrd .notif-panel {
             position: fixed;
             top: calc(var(--topbar-h) + 8px);
             right: 16px;
-            width: 320px;
+            width: 340px;
+            max-width: calc(100vw - 32px);
             background: var(--bg-card);
             border: 1px solid var(--border-card);
-            border-radius: 14px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-            z-index: 500;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(15,23,42,0.18);
+            z-index: 550;
             overflow: hidden;
             opacity: 0;
             transform: translateY(-8px) scale(0.97);
@@ -616,64 +737,73 @@
         }
         body.pov-hrd .notif-panel-hdr {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 16px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 16px 18px 14px;
+            border-bottom: 1px solid var(--border-card);
         }
         body.pov-hrd .notif-panel-hdr h4 {
-            font-size: .88rem; font-weight: 700;
+            font-size: 1rem; font-weight: 800;
             color: var(--text-primary);
         }
         body.pov-hrd .notif-panel-hdr a {
-            font-size: .72rem; color: var(--accent-light);
+            font-size: .85rem; color: var(--accent);
+            font-weight: 600;
             text-decoration: none; cursor: pointer;
         }
         body.pov-hrd .notif-item {
-            display: flex; gap: 10px;
-            padding: 11px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 12px;
+            padding: 13px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background .15s;
         }
         body.pov-hrd .notif-item:last-child { border-bottom: none; }
-        body.pov-hrd .notif-item:hover { background: rgba(255,255,255,0.04); }
+        body.pov-hrd .notif-item:hover { background: rgba(255,255,255,0.06); }
         body.pov-hrd .notif-dot-item {
-            width: 7px; height: 7px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: var(--accent);
-            margin-top: 5px; flex-shrink: 0;
+            margin-top: 6px; flex-shrink: 0;
         }
-        body.pov-hrd .notif-body { font-size: .74rem; line-height: 1.55; color: var(--text-primary); }
-        body.pov-hrd .notif-actor { font-weight: 700; }
-        body.pov-hrd .notif-meta { font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+        body.pov-hrd .notif-body { font-size: .88rem; line-height: 1.6; color: var(--text-primary); }
+        body.pov-hrd .notif-actor { font-weight: 800; }
+        body.pov-hrd .notif-meta { font-size: .78rem; color: var(--text-muted); margin-top: 3px; }
 
         body.pov-hrd #page-content {
             flex: 1;
-            padding: 24px 24px;
+            padding: 28px 28px;
+            background: var(--bg-content);
+            color: var(--text-primary);
+            overflow-x: hidden;
         }
 
         body.pov-hrd .card-panel {
             background: var(--bg-card);
-            border-radius: 12px;
+            border-radius: 14px;
             border: 1px solid var(--border-card);
-            padding: 20px;
+            padding: 22px;
+            color: var(--text-primary);
         }
 
         body.pov-hrd .django-messages .alert {
-            background: rgba(255,255,255,0.07);
-            border-color: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.06);
+            border-color: var(--border-card);
             color: var(--text-primary);
+            font-size: .95rem;
+            font-weight: 600;
         }
-        body.pov-hrd .django-messages .alert-success { border-color: rgba(22,163,74,0.5); color: #86efac; }
-        body.pov-hrd .django-messages .alert-danger  { border-color: rgba(220,38,38,0.5);  color: #fca5a5; }
-        body.pov-hrd .django-messages .alert-warning { border-color: rgba(217,119,6,0.5);  color: #fcd34d; }
+        body.pov-hrd .django-messages .alert-success { border-color: rgba(22,163,74,0.4); background: rgba(22,163,74,0.14); color: #4ade80; }
+        body.pov-hrd .django-messages .alert-danger  { border-color: rgba(220,38,38,0.4); background: rgba(220,38,38,0.14); color: #f87171; }
+        body.pov-hrd .django-messages .alert-warning { border-color: rgba(217,119,6,0.4); background: rgba(217,119,6,0.14); color: #fbbf24; }
 
-        body.pov-hrd ::-webkit-scrollbar { width: 4px; height: 4px; }
+        body.pov-hrd ::-webkit-scrollbar { width: 5px; height: 5px; }
         body.pov-hrd ::-webkit-scrollbar-track { background: transparent; }
-        body.pov-hrd ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        body.pov-hrd ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
         body.pov-hrd ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
+        /* ── HRD: MOBILE (HP) ── */
         @media (max-width: 768px) {
             body.pov-hrd #sidebar {
                 transform: translateX(calc(-1 * var(--sidebar-width)));
+                box-shadow: 6px 0 28px rgba(0,0,0,0.30);
             }
             body.pov-hrd #sidebar.mobile-open {
                 transform: translateX(0);
@@ -681,11 +811,20 @@
             body.pov-hrd #main-wrapper {
                 margin-left: 0 !important;
             }
+            body.pov-hrd .topbar {
+                padding: 0 16px 0 60px;
+            }
             body.pov-hrd #page-content {
-                padding: 16px 14px;
+                padding: 18px 16px 32px;
             }
             body.pov-hrd .sidebar-toggle-btn.sidebar-open {
                 left: 0;
+            }
+            body.pov-hrd #sidebar-backdrop.active {
+                display: block;
+                position: fixed; inset: 0;
+                background: rgba(10,20,40,0.45);
+                z-index: 450;
             }
             body.pov-hrd .notif-panel {
                 right: 8px;
@@ -695,24 +834,25 @@
 
         /* ── UNKNOWN ── */
         body.pov-unknown {
-            background: #112240; color: #e8f0fb;
+            background: #022e4c; color: #ffffff;
             display: flex; align-items: center; justify-content: center; min-height: 100vh;
+            padding: 20px;
         }
         .error-box {
             text-align: center;
-            background: #1a2e4a;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px; padding: 48px 40px; max-width: 420px; width: 90%;
+            background: #0f425f;
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 14px; padding: 52px 44px; max-width: 440px; width: 100%;
         }
-        .error-box h2 { font-size: 1.2rem; font-weight: 700; color: #e8f0fb; margin-bottom: 10px; }
-        .error-box p  { font-size: .85rem; color: #8aaac8; line-height: 1.6; margin-bottom: 24px; }
+        .error-box h2 { font-size: 1.4rem; font-weight: 800; color: #ffffff; margin-bottom: 12px; }
+        .error-box p  { font-size: .98rem; color: #cfe0ec; line-height: 1.7; margin-bottom: 26px; }
         .error-box a  {
-            display: inline-block; padding: 9px 22px;
-            background: #3b82f6; color: #fff;
-            border-radius: 8px; text-decoration: none;
-            font-size: .85rem; font-weight: 600;
+            display: inline-block; padding: 11px 26px;
+            background: linear-gradient(135deg, #56061d, #7a1e3a); color: #ffffff;
+            border-radius: 9px; text-decoration: none;
+            font-size: .98rem; font-weight: 800;
         }
-        .error-box a:hover { background: #60a5fa; }
+        .error-box a:hover { filter: brightness(1.08); }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -723,6 +863,8 @@
 {% if request.user.is_authenticated and request.user.profile and request.user.profile.role == 'employee' %}
 
     <button class="show-btn" id="show-btn">&#9776; Show Menu</button>
+
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-top">
@@ -735,31 +877,31 @@
                     <rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/>
                     <rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/>
                 </svg>
-                Dashboard
+                <span>Dashboard</span>
             </a>
             <a href="{% url 'employee-checkin' %}" class="nav-item {% block nav_emp_attendance %}{% endblock %}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                 </svg>
-                Attendance
+                <span>Attendance</span>
             </a>
             <a href="{% url 'employee-reports' %}" class="nav-item {% block nav_emp_reports %}{% endblock %}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                Reports
+                <span>Reports</span>
             </a>
             <a href="{% url 'employee-leave' %}" class="nav-item {% block nav_emp_leave %}{% endblock %}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                Leave &amp; Permission
+                <span>Leave &amp; Permission</span>
             </a>
             <a href="{% url 'employee-payroll' %}" class="nav-item {% block nav_emp_payroll %}{% endblock %}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                 </svg>
-                E-Payslip
+                <span>E-Payslip</span>
             </a>
         </div>
 
@@ -767,10 +909,10 @@
             <form method="post" action="{% url 'logout' %}" style="margin:0">
                 {% csrf_token %}
                 <button type="submit" class="logout-link">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                     </svg>
-                    Logout
+                    <span>Logout</span>
                 </button>
             </form>
         </div>
@@ -803,23 +945,38 @@
         const main        = document.getElementById('main');
         const showBtn     = document.getElementById('show-btn');
         const hideMenuBtn = document.getElementById('hide-menu-btn');
+        const backdrop    = document.getElementById('sidebar-backdrop');
+
         if (sidebar && topbar && main && showBtn && hideMenuBtn) {
-            let isOpen = localStorage.getItem('sidebar_open') !== 'false';
+            const isMobile = () => window.innerWidth <= 900;
+            const stored = localStorage.getItem('sidebar_open');
+            let isOpen = stored !== null ? stored !== 'false' : !isMobile();
+
             function applyState() {
                 const collapsed = !isOpen;
                 sidebar.classList.toggle('hidden', collapsed);
                 topbar.classList.toggle('full', collapsed);
                 main.classList.toggle('full', collapsed);
-                showBtn.style.display = collapsed ? 'flex' : 'none';
+                showBtn.style.display = (collapsed || isMobile()) ? 'flex' : 'none';
+                if (backdrop) backdrop.classList.toggle('active', isOpen && isMobile());
             }
-            function toggleSidebar() { isOpen = !isOpen; localStorage.setItem('sidebar_open', isOpen); applyState(); }
+            function toggleSidebar() {
+                isOpen = !isOpen;
+                localStorage.setItem('sidebar_open', isOpen);
+                applyState();
+            }
             showBtn.addEventListener('click', toggleSidebar);
             hideMenuBtn.addEventListener('click', toggleSidebar);
+            if (backdrop) backdrop.addEventListener('click', () => { if (isOpen) toggleSidebar(); });
+
+            window.addEventListener('resize', applyState);
             applyState();
         }
     </script>
 
 {% elif request.user.is_authenticated and request.user.profile and request.user.profile.role == 'hrd' %}
+
+    <div id="sidebar-backdrop"></div>
 
     <nav id="sidebar">
         <div class="sidebar-header">
@@ -903,7 +1060,7 @@
                 </div>
             </div>
             <div class="notif-item">
-                <div class="notif-dot-item" style="background:#f59e0b"></div>
+                <div class="notif-dot-item" style="background:#7a1e3a"></div>
                 <div class="notif-body">
                     <span class="notif-actor">HR Dept</span> updated company-wide holiday schedule.
                     <div class="notif-meta">3 hours ago · Policy Manager</div>
@@ -933,42 +1090,62 @@
         const sidebar     = document.getElementById('sidebar');
         const mainWrapper = document.getElementById('main-wrapper');
         const toggleBtn   = document.getElementById('sidebarToggle');
-        const toggleIcon  = document.getElementById('toggleIcon');
         const hideMenuBtn = document.getElementById('hideMenuBtn');
+        const backdrop    = document.getElementById('sidebar-backdrop');
+
+        const isMobile = () => window.innerWidth <= 768;
 
         if (sidebar && mainWrapper && toggleBtn) {
+            // Desktop state (persisted)
             let collapsed = localStorage.getItem('hrd_sidebar_collapsed') === 'true';
+            // Mobile state (not persisted — always starts closed on a fresh page load)
+            let mobileOpen = false;
 
             function applyHRDState() {
-                sidebar.classList.toggle('collapsed', collapsed);
-                mainWrapper.classList.toggle('expanded', collapsed);
-                toggleBtn.classList.toggle('sidebar-open', !collapsed);
-                localStorage.setItem('hrd_sidebar_collapsed', collapsed);
+                if (isMobile()) {
+                    sidebar.classList.remove('collapsed');
+                    sidebar.classList.toggle('mobile-open', mobileOpen);
+                    mainWrapper.classList.remove('expanded');
+                    toggleBtn.classList.remove('sidebar-open');
+                    if (backdrop) backdrop.classList.toggle('active', mobileOpen);
+                } else {
+                    sidebar.classList.remove('mobile-open');
+                    if (backdrop) backdrop.classList.remove('active');
+                    sidebar.classList.toggle('collapsed', collapsed);
+                    mainWrapper.classList.toggle('expanded', collapsed);
+                    toggleBtn.classList.toggle('sidebar-open', !collapsed);
+                    localStorage.setItem('hrd_sidebar_collapsed', collapsed);
+                }
             }
 
             toggleBtn.addEventListener('click', () => {
-                collapsed = !collapsed;
+                if (isMobile()) {
+                    mobileOpen = !mobileOpen;
+                } else {
+                    collapsed = !collapsed;
+                }
                 applyHRDState();
             });
 
             if (hideMenuBtn) {
                 hideMenuBtn.addEventListener('click', () => {
-                    collapsed = true;
+                    if (isMobile()) {
+                        mobileOpen = false;
+                    } else {
+                        collapsed = true;
+                    }
                     applyHRDState();
                 });
             }
 
-            document.addEventListener('click', (e) => {
-                if (window.innerWidth <= 768) {
-                    if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
-                        sidebar.classList.remove('mobile-open');
-                    }
-                    if (toggleBtn.contains(e.target)) {
-                        sidebar.classList.toggle('mobile-open');
-                    }
-                }
-            });
+            if (backdrop) {
+                backdrop.addEventListener('click', () => {
+                    mobileOpen = false;
+                    applyHRDState();
+                });
+            }
 
+            window.addEventListener('resize', applyHRDState);
             applyHRDState();
         }
 

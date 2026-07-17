@@ -4,39 +4,30 @@
 
 {% block extra_css %}
 <style>
-  /* ── Reuse CSS variables from base.html (pov-hrd) ── */
-  :root {
-    --c-card:      #132032;
-    --c-card-h:    #1a2e4a;
-    --c-input:     #0d1b30;
-    --c-border:    rgba(255,255,255,0.07);
-    --c-border-in: rgba(255,255,255,0.10);
-    --c-text:      #e8f0fb;
-    --c-muted:     #8aaac8;
-    --c-faint:     #4d6a8a;
-    --c-accent:    #3b82f6;
-    --c-accent-l:  #60a5fa;
-    --c-red:       #fca5a5;
-    --c-green:     #86efac;
-    --c-amber:     #fcd34d;
-  }
+  /*
+    This page no longer defines its own color palette (--c-card, --c-accent,
+    dst). It reuses the SAME variables already declared on body.pov-hrd in
+    base.html (--bg-card, --accent, --text-primary, dst) so Attendance
+    Detail stays visually identical to the rest of the HRD portal, including
+    the Attendance list page it links back to.
+  */
 
   /* ── Back button ── */
   .back-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 16px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--c-border-in);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-input);
     border-radius: 8px;
-    color: var(--c-muted);
+    color: var(--text-muted);
     font-size: .82rem; font-weight: 600;
     text-decoration: none;
     transition: background .2s, color .2s, border-color .2s;
   }
   .back-btn:hover {
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.2);
-    color: var(--c-text);
+    background: rgba(255,255,255,0.16);
+    border-color: rgba(255,255,255,0.28);
+    color: var(--text-primary);
   }
 
   /* ── Page header ── */
@@ -44,8 +35,8 @@
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
   }
-  .det-page-title { font-size: 1.1rem; font-weight: 700; color: var(--c-text); }
-  .det-page-sub   { font-size: .76rem; color: var(--c-muted); margin-top: 2px; }
+  .det-page-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+  .det-page-sub   { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
 
   /* ── Two-column layout ── */
   .det-layout {
@@ -58,18 +49,18 @@
 
   /* ── Cards (main panel) ── */
   .det-card {
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 12px;
     overflow: hidden;
   }
   .det-card-hdr {
     padding: 14px 18px;
-    border-bottom: 1px solid var(--c-border);
+    border-bottom: 1px solid var(--border-card);
     display: flex; align-items: center; gap: 8px;
   }
-  .det-card-hdr i { font-size: 15px; color: var(--c-accent-l); }
-  .det-card-hdr h3 { font-size: .88rem; font-weight: 700; color: var(--c-text); }
+  .det-card-hdr i { font-size: 15px; color: var(--accent-light); }
+  .det-card-hdr h3 { font-size: .88rem; font-weight: 700; color: var(--text-primary); }
   .det-card-body { padding: 18px 20px; }
 
   /* ── Type + Duration top row ── */
@@ -80,31 +71,31 @@
   .det-field-lbl {
     font-size: .63rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .45px;
-    color: var(--c-muted); margin-bottom: 5px;
+    color: var(--text-muted); margin-bottom: 5px;
   }
   .det-field-val {
-    font-size: .92rem; font-weight: 700; color: var(--c-text);
+    font-size: .92rem; font-weight: 700; color: var(--text-primary);
   }
   .det-field-val-sm {
-    font-size: .83rem; font-weight: 600; color: var(--c-text);
+    font-size: .83rem; font-weight: 600; color: var(--text-primary);
   }
 
   /* ── Reason box ── */
   .reason-box {
-    background: var(--c-input);
-    border: 1px solid var(--c-border-in);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
     border-radius: 10px;
     padding: 14px 16px;
-    font-size: .82rem; color: var(--c-muted);
+    font-size: .82rem; color: var(--text-muted);
     line-height: 1.65; font-style: italic;
     margin-bottom: 18px;
-    border-left: 3px solid var(--c-accent);
+    border-left: 3px solid var(--accent);
   }
 
   /* ── Attachment area ── */
   .attach-area {
-    background: var(--c-input);
-    border: 1px solid var(--c-border-in);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
     border-radius: 10px;
     padding: 20px;
     display: flex; flex-direction: column; align-items: center;
@@ -112,8 +103,8 @@
   }
   .pdf-icon-box {
     width: 72px; height: 90px;
-    background: var(--c-card);
-    border: 1.5px solid var(--c-border-in);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-input);
     border-radius: 8px;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -121,28 +112,28 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.25);
   }
   .pdf-icon-box .pdf-emoji { font-size: 1.8rem; }
-  .pdf-icon-box .pdf-lbl  { font-size: .55rem; font-weight: 800; color: var(--c-red); letter-spacing: .5px; }
-  .attach-name { font-size: .78rem; font-weight: 600; color: var(--c-text); }
-  .attach-meta { font-size: .68rem; color: var(--c-faint); }
+  .pdf-icon-box .pdf-lbl  { font-size: .55rem; font-weight: 800; color: #f87171; letter-spacing: .5px; }
+  .attach-name { font-size: .78rem; font-weight: 600; color: var(--text-primary); }
+  .attach-meta { font-size: .68rem; color: var(--text-faint); }
   .btn-dl {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 8px 18px;
-    background: var(--c-accent); color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff;
     border: none; border-radius: 8px;
     font-size: .78rem; font-weight: 600;
     cursor: pointer; font-family: inherit;
-    transition: background .2s; margin-top: 4px;
+    transition: filter .2s; margin-top: 4px;
     text-decoration: none;
   }
-  .btn-dl:hover { background: var(--c-accent-l); }
+  .btn-dl:hover { filter: brightness(1.08); }
 
   /* ── Right sidebar panels ── */
   .det-sidebar { display: flex; flex-direction: column; gap: 12px; }
 
   /* Employee card */
   .emp-card {
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 12px;
     padding: 16px;
     position: relative;
@@ -152,63 +143,64 @@
     padding: 3px 10px; border-radius: 20px;
     font-size: .65rem; font-weight: 700; letter-spacing: .2px;
   }
-  .badge-pending  { background: rgba(217,119,6,.2);  color: var(--c-amber); border: 1px solid rgba(217,119,6,.3); }
-  .badge-approved { background: rgba(22,163,74,.2);  color: var(--c-green); border: 1px solid rgba(22,163,74,.3); }
-  .badge-rejected { background: rgba(220,38,38,.2);  color: var(--c-red);   border: 1px solid rgba(220,38,38,.3); }
+  .badge-pending  { background: rgba(217,119,6,.20); color: #fbbf24; border: 1px solid rgba(217,119,6,.35); }
+  .badge-approved { background: rgba(22,163,74,.20); color: #4ade80; border: 1px solid rgba(22,163,74,.35); }
+  .badge-rejected { background: rgba(220,38,38,.20); color: #f87171; border: 1px solid rgba(220,38,38,.35); }
 
   .emp-av {
     width: 50px; height: 50px; border-radius: 50%;
     font-size: 1rem; font-weight: 700; color: #fff;
     display: flex; align-items: center; justify-content: center;
     margin-bottom: 10px;
-    border: 2px solid rgba(59,130,246,.35);
+    background: var(--accent);
+    border: 2px solid rgba(81,116,147,.4);
   }
-  .emp-name { font-size: .9rem; font-weight: 700; color: var(--c-text); }
-  .emp-pos  { font-size: .73rem; color: var(--c-muted); margin-bottom: 2px; }
-  .emp-dept { font-size: .7rem;  color: var(--c-faint); margin-bottom: 10px; }
+  .emp-name { font-size: .9rem; font-weight: 700; color: var(--text-primary); }
+  .emp-pos  { font-size: .73rem; color: var(--text-muted); margin-bottom: 2px; }
+  .emp-dept { font-size: .7rem;  color: var(--text-faint); margin-bottom: 10px; }
   .emp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .emp-chip {
-    font-size: .65rem; color: var(--c-muted);
-    background: rgba(255,255,255,.06);
-    border: 1px solid var(--c-border-in);
+    font-size: .65rem; color: var(--text-muted);
+    background: rgba(255,255,255,.08);
+    border: 1px solid var(--border-input);
     padding: 2px 8px; border-radius: 4px;
   }
 
   /* HRD Notes */
   .hrd-notes-card {
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 12px;
     padding: 14px 16px;
   }
-  .hrd-notes-title { font-size: .75rem; font-weight: 700; color: var(--c-text); margin-bottom: 8px; }
+  .hrd-notes-title { font-size: .75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
   .hrd-notes-card textarea {
     width: 100%;
-    background: var(--c-input);
-    border: 1px solid var(--c-border-in);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
     border-radius: 8px;
-    color: var(--c-text); font-family: inherit;
+    color: var(--text-primary); font-family: inherit;
     font-size: .78rem; line-height: 1.55;
     padding: 9px 12px; resize: none; outline: none;
     min-height: 82px;
     transition: border-color .2s;
   }
-  .hrd-notes-card textarea::placeholder { color: var(--c-faint); }
-  .hrd-notes-card textarea:focus { border-color: var(--c-accent); }
+  .hrd-notes-card textarea::placeholder { color: var(--text-faint); }
+  .hrd-notes-card textarea:focus { border-color: var(--accent); }
   .btn-save-notes {
     margin-top: 8px; width: 100%;
     padding: 8px; border-radius: 8px;
-    background: var(--c-accent); color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff;
     border: none; font-size: .78rem; font-weight: 600;
     cursor: pointer; font-family: inherit;
-    transition: background .2s;
+    transition: filter .2s;
   }
-  .btn-save-notes:hover { background: var(--c-accent-l); }
+  .btn-save-notes:hover { filter: brightness(1.08); }
 
   /* Info grid */
   .info-grid-card {
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 12px;
     padding: 14px 16px;
   }
@@ -219,25 +211,25 @@
   .info-lbl {
     font-size: .6rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .4px;
-    color: var(--c-faint); margin-bottom: 3px;
+    color: var(--text-faint); margin-bottom: 3px;
   }
   .info-val {
-    font-size: .78rem; font-weight: 600; color: var(--c-text);
+    font-size: .78rem; font-weight: 600; color: var(--text-primary);
   }
-  .info-val.missing { color: var(--c-faint); font-weight: 400; font-style: italic; }
+  .info-val.missing { color: var(--text-faint); font-weight: 400; font-style: italic; }
 
   /* Status online dot */
   .status-online { display: inline-flex; align-items: center; gap: 5px; }
   .status-online::before {
     content: ''; width: 7px; height: 7px;
-    border-radius: 50%; background: var(--c-green);
+    border-radius: 50%; background: #4ade80;
     flex-shrink: 0;
   }
 
   /* Clock in/out late tag inline */
   .late-inline {
-    font-size: .63rem; color: var(--c-amber);
-    background: rgba(217,119,6,.15);
+    font-size: .63rem; color: #fbbf24;
+    background: rgba(217,119,6,.18);
     padding: 1px 6px; border-radius: 4px;
     margin-left: 5px; vertical-align: middle;
   }
@@ -248,28 +240,28 @@
   }
   .btn-approve {
     flex: 1; padding: 9px; border-radius: 8px;
-    background: rgba(22,163,74,.15); color: var(--c-green);
-    border: 1px solid rgba(22,163,74,.3);
+    background: rgba(22,163,74,.16); color: #4ade80;
+    border: 1px solid rgba(22,163,74,.35);
     font-size: .78rem; font-weight: 700; cursor: pointer;
     font-family: inherit; transition: background .2s, border-color .2s;
   }
-  .btn-approve:hover { background: rgba(22,163,74,.28); border-color: rgba(22,163,74,.5); }
+  .btn-approve:hover { background: rgba(22,163,74,.28); border-color: rgba(22,163,74,.55); }
   .btn-reject {
     flex: 1; padding: 9px; border-radius: 8px;
-    background: rgba(220,38,38,.12); color: var(--c-red);
-    border: 1px solid rgba(220,38,38,.25);
+    background: rgba(220,38,38,.14); color: #f87171;
+    border: 1px solid rgba(220,38,38,.3);
     font-size: .78rem; font-weight: 700; cursor: pointer;
     font-family: inherit; transition: background .2s, border-color .2s;
   }
-  .btn-reject:hover { background: rgba(220,38,38,.25); border-color: rgba(220,38,38,.45); }
+  .btn-reject:hover { background: rgba(220,38,38,.26); border-color: rgba(220,38,38,.5); }
 
   /* Toast notification */
   .toast {
     position: fixed; bottom: 24px; right: 24px;
-    background: var(--c-card-h, #1a2e4a);
-    border: 1px solid var(--c-border-in);
+    background: var(--bg-card-hover);
+    border: 1px solid var(--border-input);
     border-radius: 10px; padding: 12px 18px;
-    font-size: .8rem; color: var(--c-text);
+    font-size: .8rem; color: var(--text-primary);
     box-shadow: 0 8px 28px rgba(0,0,0,.4);
     z-index: 9999;
     display: flex; align-items: center; gap: 10px;
@@ -279,6 +271,36 @@
   }
   .toast.show { transform: translateY(0); opacity: 1; pointer-events: all; }
   .toast i { font-size: 1rem; }
+
+  /* ── Photo Lightbox (used by extra_js) ── */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox-inner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 14px; padding: 16px;
+    max-width: 480px; width: 90%; position: relative;
+  }
+  .lightbox-inner img {
+    width: 100%; border-radius: 8px; display: block;
+    max-height: 60vh; object-fit: contain;
+  }
+  .lightbox-close {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,.5); border: none; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-meta {
+    margin-top: 10px; font-size: .78rem;
+    color: var(--text-muted); line-height: 1.6;
+  }
+  .lightbox-meta strong { color: var(--text-primary); }
 </style>
 {% endblock %}
 
@@ -350,7 +372,7 @@
               <i class="bi bi-download"></i> Download Attachment
             </a>
           {% else %}
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;color:var(--c-faint)">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;color:var(--text-faint)">
               <i class="bi bi-paperclip" style="font-size:1.8rem;opacity:.4"></i>
               <span style="font-size:.78rem">No attachment uploaded</span>
               <!-- Fallback: generate TXT report -->
@@ -381,18 +403,18 @@
           <div>
             <div class="det-field-lbl">Clock Out</div>
             <div class="det-field-val-sm">
-              {% if record.clock_out %}{{ record.clock_out }}{% else %}<span style="color:var(--c-red)">Belum clock out</span>{% endif %}
+              {% if record.clock_out %}{{ record.clock_out }}{% else %}<span style="color:#f87171">Belum clock out</span>{% endif %}
             </div>
           </div>
           <div>
             <div class="det-field-lbl">Status</div>
             <div class="det-field-val-sm">
               {% if record.status == 'Late' %}
-                <span class="emp-chip" style="color:var(--c-amber);border-color:rgba(217,119,6,.3)">Late</span>
+                <span class="emp-chip" style="color:#fbbf24;border-color:rgba(217,119,6,.35)">Late</span>
               {% elif record.status == 'Overtime' %}
-                <span class="emp-chip" style="color:#93c5fd;border-color:rgba(59,130,246,.3)">Overtime</span>
+                <span class="emp-chip" style="color:#9fc3dd;border-color:rgba(81,116,147,.4)">Overtime</span>
               {% else %}
-                <span class="emp-chip" style="color:var(--c-green);border-color:rgba(22,163,74,.3)">Present</span>
+                <span class="emp-chip" style="color:#4ade80;border-color:rgba(22,163,74,.35)">Present</span>
               {% endif %}
             </div>
           </div>
@@ -408,9 +430,9 @@
             <div class="det-field-lbl">Location Valid</div>
             <div class="det-field-val-sm">
               {% if record.is_valid_location %}
-                <span style="color:var(--c-green)"><i class="bi bi-check-circle-fill"></i> Valid</span>
+                <span style="color:#4ade80"><i class="bi bi-check-circle-fill"></i> Valid</span>
               {% else %}
-                <span style="color:var(--c-red)"><i class="bi bi-x-circle-fill"></i> Invalid</span>
+                <span style="color:#f87171"><i class="bi bi-x-circle-fill"></i> Invalid</span>
               {% endif %}
             </div>
           </div>
@@ -422,7 +444,7 @@
           <div class="det-field-lbl" style="margin-bottom:8px">Selfie Photo</div>
           <img src="{{ record.photo_url }}"
                alt="Selfie {{ record.employee_name }}"
-               style="width:100%;max-width:320px;border-radius:10px;border:1px solid var(--c-border-in);cursor:pointer"
+               style="width:100%;max-width:320px;border-radius:10px;border:1px solid var(--border-input);cursor:pointer"
                onclick="openLightbox('{{ record.photo_url }}','{{ record.employee_name }}','{{ record.date }}','{{ record.clock_in }}')">
         </div>
         {% endif %}
@@ -442,10 +464,8 @@
         {% if record.status == 'Late' %}PENDING{% else %}APPROVED{% endif %}
       </span>
 
-      <div class="emp-av" id="det-emp-av"
-           style="background: {{ record.employee_code|default:'EMP001'|slice:'3:'|add:'1'|default:'#3b82f6' }}">
-        {# Initials via template filter or JS fallback #}
-        <span id="det-emp-initials">{{ record.employee_name|default:"??" |slice:":1"|upper }}{{ record.employee_name|default:""|wordcount }}</span>
+      <div class="emp-av" id="det-emp-av">
+        <span id="det-emp-initials">{{ record.employee_name|default:"?"|slice:":2"|upper }}</span>
       </div>
       <div class="emp-name" id="det-emp-name">{{ record.employee_name|default:"—" }}</div>
       <div class="emp-pos"  id="det-emp-pos">{{ record.employee_position|default:record.employee_division }}</div>
@@ -458,7 +478,7 @@
 
     <!-- HRD Notes -->
     <div class="hrd-notes-card">
-      <div class="hrd-notes-title"><i class="bi bi-pencil-square" style="margin-right:5px;color:var(--c-accent-l)"></i>HRD Review Notes</div>
+      <div class="hrd-notes-title"><i class="bi bi-pencil-square" style="margin-right:5px;color:var(--accent-light)"></i>HRD Review Notes</div>
       <form method="post" action="" id="notes-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="save_notes">
@@ -536,7 +556,7 @@
 
 <!-- ── Toast ── -->
 <div class="toast" id="toast">
-  <i class="bi bi-check-circle-fill" style="color:var(--c-green)"></i>
+  <i class="bi bi-check-circle-fill" style="color:#4ade80"></i>
   <span id="toast-msg">Notes saved successfully.</span>
 </div>
 
@@ -549,7 +569,7 @@
    Avatar initials + color helper
    (same logic as attendance.html)
 ──────────────────────────────── */
-const AV_COLORS = ['#1e3a5f','#2980b9','#16a085','#8e44ad','#c0392b','#d35400','#1a6b5a','#4a1c7c'];
+const AV_COLORS = ['#0f3a56','#517493','#16a085','#7a1e3a','#c0392b','#d35400','#1a6b5a','#56061d'];
 
 function initials(name) {
   return (name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -582,7 +602,7 @@ function openLightbox(url, name, date, clockIn) {
   document.getElementById('lb-meta').innerHTML =
     `<strong>${name}</strong><br>
      Tanggal: ${date} &nbsp;|&nbsp; Clock In: ${clockIn}<br>
-     <span style="color:var(--c-faint,#4d6a8a);font-size:.68rem">Klik di luar foto untuk menutup</span>`;
+     <span style="color:var(--text-faint);font-size:.68rem">Klik di luar foto untuk menutup</span>`;
   document.getElementById('lightbox').classList.add('open');
 }
 function closeLightbox(event) {
@@ -632,7 +652,7 @@ function showToast(msg, isError = false) {
   ico.className = isError
     ? 'bi bi-x-circle-fill'
     : 'bi bi-check-circle-fill';
-  ico.style.color = isError ? 'var(--c-red)' : 'var(--c-green)';
+  ico.style.color = isError ? '#f87171' : '#4ade80';
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 3000);
 }
@@ -653,36 +673,4 @@ document.getElementById('notes-form')?.addEventListener('submit', async (e) => {
   }
 });
 </script>
-
-<!-- Lightbox CSS — reused from attendance.html pattern -->
-<style>
-  .lightbox {
-    position: fixed; inset: 0; background: rgba(0,0,0,.85);
-    display: none; align-items: center; justify-content: center;
-    z-index: 9999;
-  }
-  .lightbox.open { display: flex; }
-  .lightbox-inner {
-    background: var(--c-card, #132032);
-    border: 1px solid var(--c-border, rgba(255,255,255,.07));
-    border-radius: 14px; padding: 16px;
-    max-width: 480px; width: 90%; position: relative;
-  }
-  .lightbox-inner img {
-    width: 100%; border-radius: 8px; display: block;
-    max-height: 60vh; object-fit: contain;
-  }
-  .lightbox-close {
-    position: absolute; top: 10px; right: 10px;
-    background: rgba(0,0,0,.5); border: none; color: #fff;
-    width: 28px; height: 28px; border-radius: 50%;
-    cursor: pointer; font-size: .9rem;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .lightbox-meta {
-    margin-top: 10px; font-size: .78rem;
-    color: var(--c-muted, #8aaac8); line-height: 1.6;
-  }
-  .lightbox-meta strong { color: var(--c-text, #e8f0fb); }
-</style>
 {% endblock %}

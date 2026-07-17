@@ -14,15 +14,19 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from employee.models import Attendance, Employee, Leave, Payroll, Profile
+from employee.models import Attendance, Employee, Holiday, Leave, Payroll, PayrollApproval, Profile
 
-OT_WEEKDAY_RATE  = Decimal('35000')   
-OT_DAYOFF_RATE   = Decimal('100000')   
+OT_WEEKDAY_RATE  = Decimal('35000')    # lembur > 10 jam di hari kerja
+OT_DAYOFF_RATE   = Decimal('100000')   # lembur di hari libur/weekend, minimal 5 jam kerja
+OT_HOLIDAY_RATE  = Decimal('200000')   # lembur di hari raya/libur nasional, minimal 5 jam kerja
 
-NORMAL_WORK_MINUTES = 8 * 60          
-OVERTIME_THRESHOLD  = 10 * 60         
-DAYOFF_MIN_MINUTES  = 5 * 60         
+WORKING_DAYS_PER_WEEK  = 5           
+STANDARD_WORK_MINUTES  = 9 * 60   
+OVERTIME_THRESHOLD     = 10 * 60     
+DAYOFF_MIN_MINUTES     = 5 * 60      
 
+STANDARD_CHECK_IN_HOUR  = 8     
+LATE_TOLERANCE_MINUTES  = 0            
 LATE_PENALTY_PER_MINUTE = Decimal('0')   
 
 VALID_PAYROLL_STATUSES = [
@@ -45,12 +49,24 @@ def hrd_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
+def supervisor_required(view_func):
+    """
+    Sama seperti hrd_required, tapi untuk role 'supervisor' (Atasan) —
+    dipakai untuk endpoint approval payroll level 1.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if not hasattr(request.user, 'profile') or request.user.profile.role != 'supervisor':
+            messages.error(request, "Akses ditolak. Halaman ini hanya untuk Atasan/Supervisor.")
+            return redirect('login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
 def _payroll_range(year: int, month: int):
-    """
-    Kembalikan (start_date, end_date) untuk periode payroll bulan `month`/`year`.
-    Contoh PAYROLL_CUTOFF_DAY=20:
-      - Payroll Juni 2025 → 21 Mei 2025 s/d 20 Juni 2025
-    """
+    
     end = date(year, month, PAYROLL_CUTOFF_DAY)
 
     if month == 1:
@@ -108,13 +124,26 @@ def _duration_minutes(check_in, check_out) -> int:
     return max(0, total)
 
 
+def _get_day_type(check_date: date, holiday_dates: set | None = None) -> str:
+  
+    if holiday_dates is not None:
+        is_holiday = check_date in holiday_dates
+    else:
+        is_holiday = Holiday.objects.filter(date=check_date).exists()
+
+    if is_holiday:
+        return 'holiday'
+    if check_date.weekday() >= 5:
+        return 'weekend'
+    return 'workday'
+
+
 def _is_dayoff(check_date: date) -> bool:
     """
-    Deteksi apakah tanggal adalah hari libur/weekend.
-    Saat ini cek sederhana: Sabtu=5, Minggu=6.
-    Extend logic ini untuk menambahkan libur nasional / cuti bersama.
+    Backward-compat helper: True jika tanggal BUKAN hari kerja normal
+    (weekend ATAUPUN hari raya/libur nasional).
     """
-    return check_date.weekday() >= 5   
+    return _get_day_type(check_date) != 'workday'
 
 
 def _calc_attendance_summary(employee_pk: int, start_date: date, end_date: date) -> dict:
@@ -127,38 +156,61 @@ def _calc_attendance_summary(employee_pk: int, start_date: date, end_date: date)
         date__range=(start_date, end_date),
     )
 
-    total_days    = (end_date - start_date).days + 1
-    weekday_count = sum(
+    total_days = (end_date - start_date).days + 1
+
+    # Query semua tanggal holiday dalam periode ini SEKALI di awal,
+    # supaya _get_day_type() tidak query ke DB berulang kali di dalam loop.
+    holiday_dates = set(
+        Holiday.objects.filter(date__range=(start_date, end_date))
+        .values_list('date', flat=True)
+    )
+
+    # working_days = hari kerja EFEKTIF: Senin-Jumat DAN bukan hari raya.
+    # Kalau hari raya jatuh di hari kerja, hari itu tidak dihitung sebagai
+    # hari kerja wajib (karyawan tidak wajib masuk).
+    working_days = sum(
         1 for d in (start_date + timedelta(n) for n in range(total_days))
-        if d.weekday() < 5
+        if _get_day_type(d, holiday_dates) == 'workday'
     )
 
     present_days    = 0
+    leave_days      = 0   # izin/sakit resmi (status='leave') — TIDAK memotong gaji, dipisah dari absent
     late_count      = 0
     total_late_min  = 0
     ot_weekday_sess = 0
     ot_dayoff_sess  = 0
+    ot_holiday_sess = 0
 
     for rec in records:
         status = (rec.status or '').lower()
+        dtype  = _get_day_type(rec.date, holiday_dates)
 
-        if _is_dayoff(rec.date):
-
+        if dtype in ('weekend', 'holiday'):
+            # Lembur di hari libur (weekend/hari raya): minimal 5 jam kerja = 1 sesi.
+            # Rate-nya BEDA tergantung jenis hari (dipisah di _calc_payroll_components).
             if rec.check_in and rec.check_out:
                 dur = _duration_minutes(rec.check_in, rec.check_out)
                 if dur >= DAYOFF_MIN_MINUTES:
-                    ot_dayoff_sess += 1
+                    if dtype == 'holiday':
+                        ot_holiday_sess += 1
+                    else:
+                        ot_dayoff_sess += 1
         else:
+            # Hari kerja biasa
             if status in ('present', 'late', 'overtime'):
                 present_days += 1
+            elif status == 'leave':
+                leave_days += 1
 
             if status == 'late':
                 late_count += 1
                 if rec.check_in:
-                    from django.utils import timezone as tz
-                    ci_local = tz.localtime(rec.check_in) if tz.is_aware(rec.check_in) else rec.check_in
-                    work_start = ci_local.replace(hour=8, minute=0, second=0, microsecond=0)
-                    late_min   = max(0, int((ci_local - work_start).total_seconds() / 60))
+                    ci_local = timezone.localtime(rec.check_in) if timezone.is_aware(rec.check_in) else rec.check_in
+                    work_start = ci_local.replace(
+                        hour=STANDARD_CHECK_IN_HOUR, minute=0, second=0, microsecond=0
+                    )
+                    late_min_raw = max(0, int((ci_local - work_start).total_seconds() / 60))
+                    late_min     = max(0, late_min_raw - LATE_TOLERANCE_MINUTES)
                     total_late_min += late_min
 
             if rec.check_in and rec.check_out:
@@ -166,16 +218,22 @@ def _calc_attendance_summary(employee_pk: int, start_date: date, end_date: date)
                 if dur > OVERTIME_THRESHOLD:
                     ot_weekday_sess += 1
 
-    absent_days = max(0, weekday_count - present_days)
+    # absent_days = hari kerja yang TIDAK present DAN TIDAK leave (termasuk yang
+    # sama sekali tidak ada record Attendance-nya = dianggap mangkir tanpa keterangan).
+    # Izin/sakit (leave_days) sengaja DIKELUARKAN dari rumus ini sesuai kebijakan
+    # "izin/sakit tidak mempengaruhi gaji".
+    absent_days = max(0, working_days - present_days - leave_days)
 
     return {
-        'working_days':        weekday_count,
+        'working_days':        working_days,
         'present_days':        present_days,
+        'leave_days':          leave_days,
         'absent_days':         absent_days,
         'late_count':          late_count,
         'total_late_minutes':  total_late_min,
         'ot_weekday_sessions': ot_weekday_sess,
         'ot_dayoff_sessions':  ot_dayoff_sess,
+        'ot_holiday_sessions': ot_holiday_sess,
     }
 
 
@@ -189,9 +247,13 @@ def _calc_payroll_components(employee: Employee, summary: dict) -> dict:
     """
     basic_salary = Decimal(str(employee.salary or 0))
 
+    # ── FIX: sebelumnya ot_holiday_sessions dihitung di summary tapi
+    # tidak pernah dikalikan OT_HOLIDAY_RATE dan tidak masuk overtime_pay.
+    # Sekarang ketiga jenis lembur (weekday/dayoff/holiday) diikutkan semua.
     ot_weekday_pay = Decimal(summary['ot_weekday_sessions']) * OT_WEEKDAY_RATE
     ot_dayoff_pay  = Decimal(summary['ot_dayoff_sessions'])  * OT_DAYOFF_RATE
-    overtime_pay   = ot_weekday_pay + ot_dayoff_pay
+    ot_holiday_pay = Decimal(summary['ot_holiday_sessions']) * OT_HOLIDAY_RATE
+    overtime_pay   = ot_weekday_pay + ot_dayoff_pay + ot_holiday_pay
 
     allowance = Decimal('0')
 
@@ -277,9 +339,6 @@ def dashboard(request):
     )
     pie_labels = [d['employee__organization'] or 'Unknown' for d in dept_qs]
     pie_values = [d['total'] for d in dept_qs]
-
-    # Build a list that contains one "recent attendance" record per employee profile.
-    # If an employee has no attendance record, include a placeholder with status 'absent'.
     recent_attendance = []
     profiles = Profile.objects.filter(role='employee').select_related('user', 'employee')
     for p in profiles:
@@ -982,6 +1041,9 @@ def generate_payroll(request):
 
             ot_weekday_amount = int(summary['ot_weekday_sessions']) * int(OT_WEEKDAY_RATE)
             ot_dayoff_amount  = int(summary['ot_dayoff_sessions'])  * int(OT_DAYOFF_RATE)
+            # ── FIX: tambahkan amount lembur hari raya nasional supaya
+            # ikut tampil di response (sebelumnya tidak dikirim sama sekali).
+            ot_holiday_amount = int(summary['ot_holiday_sessions']) * int(OT_HOLIDAY_RATE)
 
             result_list.append({
                 'payroll_id':   pr.pk,
@@ -999,8 +1061,10 @@ def generate_payroll(request):
 
                 'ot_weekday_sessions': summary['ot_weekday_sessions'],
                 'ot_dayoff_sessions':  summary['ot_dayoff_sessions'],
+                'ot_holiday_sessions': summary['ot_holiday_sessions'],
                 'ot_weekday_amount':   ot_weekday_amount,
                 'ot_dayoff_amount':    ot_dayoff_amount,
+                'ot_holiday_amount':   ot_holiday_amount,
                 'overtime_amount':     int(components['overtime_pay']),
 
                 'base_salary':      int(components['basic_salary']),
@@ -1076,6 +1140,9 @@ def payroll_detail(request, payroll_id):
 
     ot_weekday_amount = int(summary['ot_weekday_sessions']) * int(OT_WEEKDAY_RATE)
     ot_dayoff_amount  = int(summary['ot_dayoff_sessions'])  * int(OT_DAYOFF_RATE)
+    # ── FIX: tambahkan amount lembur hari raya nasional supaya
+    # ikut tampil di response (sebelumnya tidak dikirim sama sekali).
+    ot_holiday_amount = int(summary['ot_holiday_sessions']) * int(OT_HOLIDAY_RATE)
 
     return JsonResponse({
         'payroll_id':    pr.pk,
@@ -1092,8 +1159,10 @@ def payroll_detail(request, payroll_id):
 
         'ot_weekday_sessions': summary['ot_weekday_sessions'],
         'ot_dayoff_sessions':  summary['ot_dayoff_sessions'],
+        'ot_holiday_sessions': summary['ot_holiday_sessions'],
         'ot_weekday_amount':   ot_weekday_amount,
         'ot_dayoff_amount':    ot_dayoff_amount,
+        'ot_holiday_amount':   ot_holiday_amount,
         'overtime_amount':     int(pr.overtime_pay),
 
         'base_salary':      int(pr.basic_salary),

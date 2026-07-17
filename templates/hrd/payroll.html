@@ -6,16 +6,22 @@
 {% block extra_css %}
 <style>
     :root {
-        --c-card:      #132032;
-        --c-card-h:    #1a2e4a;
-        --c-input:     #0d1b30;
-        --c-border:    rgba(255,255,255,0.07);
-        --c-border-in: rgba(255,255,255,0.10);
-        --c-text:      #e8f0fb;
-        --c-muted:     #8aaac8;
-        --c-faint:     #4d6a8a;
-        --c-accent:    #3b82f6;
-        --c-accent-l:  #60a5fa;
+        /* ── Disamakan dengan tema HRD di base.html (navy + steel-blue) ──
+           Sebelumnya file ini punya palet sendiri (biru elektrik #3b82f6,
+           card gelap #132032) yang beda dari base.html sehingga halaman
+           Payroll terlihat tidak konsisten dengan Dashboard/Attendance/
+           Manage Employee. Sekarang semua token nilainya disamakan
+           persis dengan variabel body.pov-hrd di base.html. */
+        --c-card:      #0f3a56;   /* = --bg-card */
+        --c-card-h:    #14415f;   /* = --bg-card-hover */
+        --c-input:     #0f3a56;   /* = --bg-input */
+        --c-border:    rgba(255,255,255,0.14); /* = --border-card */
+        --c-border-in: rgba(255,255,255,0.14); /* = --border-input */
+        --c-text:      #ffffff;   /* = --text-primary */
+        --c-muted:     #a9c2d6;   /* = --text-muted */
+        --c-faint:     #7f9bb0;   /* = --text-faint */
+        --c-accent:    #517493;   /* = --accent */
+        --c-accent-l:  #6f8fac;   /* = --accent-light */
     }
 
     .page-hdr-payroll {
@@ -60,7 +66,7 @@
         transition: background .2s; white-space: nowrap; align-self: flex-end; height: 36px;
     }
     .btn-submit-payroll:hover { background: var(--c-accent-l); }
-    .btn-submit-payroll:disabled { background: rgba(59,130,246,.3); cursor: not-allowed; opacity: .6; }
+    .btn-submit-payroll:disabled { background: rgba(81,116,147,.3); cursor: not-allowed; opacity: .6; }
     .btn-submit-payroll .spinner {
         width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4);
         border-top-color: #fff; border-radius: 50%;
@@ -75,8 +81,8 @@
     .period-chip {
         display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
         border-radius: 6px; font-size: .7rem; font-weight: 600;
-        background: rgba(59,130,246,.12); color: var(--c-accent-l);
-        border: 1px solid rgba(59,130,246,.25);
+        background: rgba(81,116,147,.18); color: var(--c-accent-l);
+        border: 1px solid rgba(81,116,147,.35);
     }
     .cutoff-chip {
         display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
@@ -115,8 +121,8 @@
         justify-content: center; padding: 72px 24px; text-align: center;
     }
     .empty-state-icon {
-        width: 56px; height: 56px; background: rgba(59,130,246,.12);
-        border: 1px solid rgba(59,130,246,.2); border-radius: 50%;
+        width: 56px; height: 56px; background: rgba(81,116,147,.18);
+        border: 1px solid rgba(81,116,147,.3); border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-size: 22px; color: var(--c-accent-l); margin-bottom: 14px;
     }
@@ -152,7 +158,7 @@
 
     /* Bulk bar — tanpa tombol supervisor */
     .bulk-bar {
-        background: rgba(59,130,246,.10); border-bottom: 1px solid rgba(59,130,246,.20);
+        background: rgba(81,116,147,.14); border-bottom: 1px solid rgba(81,116,147,.28);
         padding: 9px 14px; display: none; align-items: center; gap: 10px;
         color: var(--c-text); font-size: .8rem; font-weight: 600;
     }
@@ -187,7 +193,7 @@
     .emp-cell { display: flex; align-items: center; gap: 10px; }
     .emp-avatar {
         width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
-        background: rgba(59,130,246,.2); display: flex; align-items: center; justify-content: center;
+        background: rgba(81,116,147,.28); display: flex; align-items: center; justify-content: center;
         color: var(--c-accent-l); font-size: .62rem; font-weight: 700;
     }
     .emp-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -201,8 +207,8 @@
     }
     .badge-approved { background: rgba(22,163,74,.2);   color: #86efac; border: 1px solid rgba(22,163,74,.3); }
     .badge-draft    { background: rgba(217,119,6,.2);   color: #fcd34d; border: 1px solid rgba(217,119,6,.3); }
-    .badge-rejected { background: rgba(220,38,38,.15);  color: #fca5a5; border: 1px solid rgba(220,38,38,.25); }
-    .badge-pending  { background: rgba(59,130,246,.16); color: var(--c-accent-l); border: 1px solid rgba(59,130,246,.26); }
+    .badge-reject { background: rgba(220,38,38,.15);  color: #fca5a5; border: 1px solid rgba(220,38,38,.25); }
+    .badge-pending  { background: rgba(81,116,147,.22); color: var(--c-accent-l); border: 1px solid rgba(81,116,147,.35); }
     .badge-done     { background: rgba(99,102,241,.18); color: #c4b5fd; border: 1px solid rgba(99,102,241,.28); }
 
     .late-badge { display: inline-flex; align-items: center; gap: 4px; font-size: .75rem; font-weight: 600; }
@@ -211,6 +217,7 @@
     .ot-badge { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; font-weight: 600; }
     .ot-badge.has-ot { color: #fdba74; }
     .ot-badge.no-ot  { color: var(--c-faint); }
+    .ot-badge.has-holiday { color: #f472b6; }
 
     .total-salary-cell { font-size: .8rem; font-weight: 700; color: var(--c-accent-l); white-space: nowrap; }
     .total-salary-cell .base-part { font-size: .68rem; font-weight: 500; color: var(--c-muted); display: block; margin-top: 2px; }
@@ -272,7 +279,7 @@
     .toast-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: .82rem; flex-shrink: 0; }
     .toast-icon.success { background: rgba(22,163,74,.2);  color: #86efac; }
     .toast-icon.error   { background: rgba(220,38,38,.2);  color: #fca5a5; }
-    .toast-icon.info    { background: rgba(59,130,246,.2); color: var(--c-accent-l); }
+    .toast-icon.info    { background: rgba(81,116,147,.25); color: var(--c-accent-l); }
     .toast-icon.warning { background: rgba(217,119,6,.18); color: #fcd34d; }
     .toast-body { flex: 1; }
     .toast-title { font-size: .75rem; font-weight: 700; color: var(--c-text); }
@@ -310,11 +317,11 @@
 
     .modal-emp-block {
         display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-        background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.16);
+        background: rgba(81,116,147,.14); border: 1px solid rgba(81,116,147,.28);
         border-radius: 10px; margin-bottom: 16px;
     }
     .modal-emp-avatar {
-        width: 40px; height: 40px; border-radius: 50%; background: rgba(59,130,246,.2);
+        width: 40px; height: 40px; border-radius: 50%; background: rgba(81,116,147,.28);
         display: flex; align-items: center; justify-content: center;
         color: var(--c-accent-l); font-size: .82rem; font-weight: 700; flex-shrink: 0;
     }
@@ -345,15 +352,17 @@
     }
     .ot-tier-label { color: var(--c-muted); }
     .ot-tier-value { color: #fdba74; font-weight: 700; }
+    .ot-tier-row.holiday { background: rgba(244,114,182,.07); border-color: rgba(244,114,182,.16); }
+    .ot-tier-row.holiday .ot-tier-value { color: #f472b6; }
 
     /* Approval flow — 3 langkah sederhana (HRD only) */
     .hrd-flow-block {
-        background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.16);
+        background: rgba(81,116,147,.10); border: 1px solid rgba(81,116,147,.28);
         border-radius: 8px; padding: 11px 13px; margin-top: 8px;
     }
     .hrd-flow-title {
         font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
-        color: rgba(96,165,250,.7); margin-bottom: 8px;
+        color: rgba(111,143,172,.85); margin-bottom: 8px;
     }
     .hrd-step {
         display: flex; align-items: center; gap: 9px; padding: 5px 0;
@@ -366,7 +375,7 @@
         font-size: .65rem; font-weight: 700; flex-shrink: 0;
     }
     .hrd-step-num.done   { background: rgba(22,163,74,.3);   color: #86efac; }
-    .hrd-step-num.active { background: rgba(59,130,246,.25); color: var(--c-accent-l); }
+    .hrd-step-num.active { background: rgba(81,116,147,.35); color: var(--c-accent-l); }
     .hrd-step-num.wait   { background: rgba(255,255,255,.07); color: var(--c-faint); }
     .hrd-step-label  { color: var(--c-muted); flex: 1; }
     .hrd-step-status { font-weight: 700; font-size: .72rem; }
@@ -441,7 +450,6 @@
         </div>
     </form>
 
-    <!-- Stats: 5 kolom — Approved, Done, Draft, Rejected, Pending -->
     <div class="form-stats" id="formStats" style="display:none;">
         <div class="form-stat-item green">
             <div class="form-stat-num" id="statApproved">0</div>
@@ -456,8 +464,8 @@
             <div class="form-stat-lbl">Draft</div>
         </div>
         <div class="form-stat-item red">
-            <div class="form-stat-num" id="statRejected">0</div>
-            <div class="form-stat-lbl">Rejected</div>
+            <div class="form-stat-num" id="statReject">0</div>
+            <div class="form-stat-lbl">Reject</div>
         </div>
         <div class="form-stat-item blue">
             <div class="form-stat-num" id="statPending">0</div>
@@ -503,7 +511,7 @@
                 <option value="">All Status</option>
                 <option value="Approved">Approved</option>
                 <option value="Draft">Draft</option>
-                <option value="Rejected">Rejected</option>
+                <option value="Reject">Reject</option>
                 <option value="Pending">Pending</option>
                 <option value="Done">Done</option>
             </select>
@@ -525,7 +533,7 @@
         <button class="btn-bulk btn-bulk-draft" onclick="bulkAction('Draft')">
             <i class="bi bi-pencil"></i> Draft All
         </button>
-        <button class="btn-bulk btn-bulk-reject" onclick="bulkAction('Rejected')">
+        <button class="btn-bulk btn-bulk-reject" onclick="bulkAction('Reject')">
             <i class="bi bi-x-lg"></i> Reject All
         </button>
     </div>
@@ -573,14 +581,13 @@
 
 {% block extra_js %}
 <script>
-const OT_RATE = { weekday: 35000, dayoff: 100000 };
+const OT_RATE = { weekday: 35000, dayoff: 100000, holiday: 200000 };
 
-// Status hanya 5 — tanpa supervisor
 const STATUS_FLOW = {
     'Pending':  { cls: 'badge-pending',  icon: 'bi-clock-fill' },
     'Draft':    { cls: 'badge-draft',    icon: 'bi-pencil-fill' },
     'Approved': { cls: 'badge-approved', icon: 'bi-check-circle-fill' },
-    'Rejected': { cls: 'badge-rejected', icon: 'bi-x-circle-fill' },
+    'Reject': { cls: 'badge-reject', icon: 'bi-x-circle-fill' },
     'Done':     { cls: 'badge-done',     icon: 'bi-trophy-fill' }
 };
 
@@ -681,11 +688,11 @@ function populateDeptFilter() {
 }
 
 function updateFormStats() {
-    const counts = { Approved:0, Draft:0, Rejected:0, Done:0, Pending:0 };
+    const counts = { Approved:0, Draft:0, Reject:0, Done:0, Pending:0 };
     allData.forEach(e => { if (counts[e.payroll_status] !== undefined) counts[e.payroll_status]++; });
     document.getElementById('statApproved').textContent = counts['Approved'];
     document.getElementById('statDraft').textContent    = counts['Draft'];
-    document.getElementById('statRejected').textContent = counts['Rejected'];
+    document.getElementById('statReject').textContent = counts['Reject'];
     document.getElementById('statDone').textContent     = counts['Done'];
     document.getElementById('statPending').textContent  = counts['Pending'];
 }
@@ -693,7 +700,8 @@ function updateFormStats() {
 function calcOvertimeAmount(emp) {
     if (emp.overtime_amount != null) return emp.overtime_amount;
     return ((emp.ot_weekday_sessions||0) * OT_RATE.weekday) +
-           ((emp.ot_dayoff_sessions||0)  * OT_RATE.dayoff);
+           ((emp.ot_dayoff_sessions||0)  * OT_RATE.dayoff) +
+           ((emp.ot_holiday_sessions||0) * OT_RATE.holiday);
 }
 
 function fmtRupiah(val) {
@@ -731,8 +739,16 @@ function buildRow(emp) {
         ? `<span class="late-badge has-late"><i class="bi bi-exclamation-circle-fill"></i> ${emp.late_count||0}× late, ${emp.absent_days||0}d absent</span>`
         : `<span class="late-badge no-late">—</span>`;
 
+    const otParts = [];
+    if ((emp.ot_weekday_sessions||0) > 0) otParts.push(`${emp.ot_weekday_sessions}× reguler`);
+    if ((emp.ot_dayoff_sessions||0)  > 0) otParts.push(`${emp.ot_dayoff_sessions}× libur`);
+    if ((emp.ot_holiday_sessions||0) > 0) otParts.push(`${emp.ot_holiday_sessions}× hari raya`);
+
     const otCell = otAmount > 0
-        ? `<span class="ot-badge has-ot"><i class="bi bi-lightning-fill"></i> ${fmtRupiah(otAmount)}</span>`
+        ? `<span class="ot-badge ${(emp.ot_holiday_sessions||0) > 0 ? 'has-holiday' : 'has-ot'}">
+               <i class="bi bi-lightning-fill"></i> ${fmtRupiah(otAmount)}
+               <span style="color:var(--c-faint);font-weight:500;">(${otParts.join(', ')})</span>
+           </span>`
         : `<span class="ot-badge no-ot">—</span>`;
 
     const totalCell = `<div class="total-salary-cell">
@@ -744,26 +760,24 @@ function buildRow(emp) {
         <i class="bi ${sInfo.icon}"></i> ${emp.payroll_status}
     </span>`;
 
-    // Action buttons — alur Pending/Draft → Approve/Reject, Approved → Done
     let actionBtns = '';
     switch (emp.payroll_status) {
         case 'Pending':
             actionBtns += `<button class="btn-action draft"   onclick="quickAction(${emp.payroll_id},'Draft')"    title="Simpan Draft"><i class="bi bi-pencil"></i></button>`;
             actionBtns += `<button class="btn-action approve" onclick="quickAction(${emp.payroll_id},'Approved')" title="Approve"><i class="bi bi-check-lg"></i></button>`;
-            actionBtns += `<button class="btn-action reject"  onclick="quickAction(${emp.payroll_id},'Rejected')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
+            actionBtns += `<button class="btn-action reject"  onclick="quickAction(${emp.payroll_id},'Reject')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
             break;
         case 'Draft':
             actionBtns += `<button class="btn-action approve" onclick="quickAction(${emp.payroll_id},'Approved')" title="Approve"><i class="bi bi-check-lg"></i></button>`;
-            actionBtns += `<button class="btn-action reject"  onclick="quickAction(${emp.payroll_id},'Rejected')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
+            actionBtns += `<button class="btn-action reject"  onclick="quickAction(${emp.payroll_id},'Reject')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
             break;
         case 'Approved':
             actionBtns += `<button class="btn-action done"   onclick="quickAction(${emp.payroll_id},'Done')"     title="Tandai Done"><i class="bi bi-trophy"></i> Done</button>`;
-            actionBtns += `<button class="btn-action reject" onclick="quickAction(${emp.payroll_id},'Rejected')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
+            actionBtns += `<button class="btn-action reject" onclick="quickAction(${emp.payroll_id},'Reject')" title="Reject"><i class="bi bi-x-lg"></i></button>`;
             break;
-        case 'Rejected':
+        case 'Reject':
             actionBtns += `<button class="btn-action draft"  onclick="quickAction(${emp.payroll_id},'Draft')"    title="Kembalikan ke Draft"><i class="bi bi-arrow-counterclockwise"></i></button>`;
             break;
-        // Done — read-only, tidak ada aksi
     }
     actionBtns += `<button class="btn-action" onclick="openDetail(${emp.payroll_id})">Detail</button>`;
 
@@ -852,7 +866,7 @@ async function updatePayrollStatus(payrollIds, status) {
             'Approved': { icon:'✓', type:'success' },
             'Done':     { icon:'★', type:'info'    },
             'Draft':    { icon:'✎', type:'warning' },
-            'Rejected': { icon:'✗', type:'error'   }
+            'Reject': { icon:'✗', type:'error'   }
         };
         const l = labels[status] || { icon:'•', type:'info' };
         showToast(l.type, `${l.icon} ${status}`, `${payrollIds.length} record diperbarui`);
@@ -888,13 +902,12 @@ async function openDetail(payrollId) {
         const otAmount   = calcOvertimeAmount(emp);
         const baseSalary = emp.base_salary || emp.salary || 0;
         const netSal     = emp.net_salary  || (baseSalary + otAmount);
+        
         const st         = emp.payroll_status;
-
-        // Alur HRD: Pending → Draft → Approved → Done
         const step1Done = ['Draft','Approved','Done'].includes(st);
         const step2Done = ['Approved','Done'].includes(st);
         const step3Done = ['Done'].includes(st);
-        const isRejected = st === 'Rejected';
+        const isReject = st === 'Reject';
 
         const hrdFlowBlock = `<div class="hrd-flow-block">
             <div class="hrd-flow-title"><i class="bi bi-diagram-2"></i> Alur Approval HRD</div>
@@ -902,7 +915,7 @@ async function openDetail(payrollId) {
                 <div class="hrd-step-num ${step1Done?'done':(st==='Pending'?'active':'wait')}">${step1Done?'✓':1}</div>
                 <span class="hrd-step-label">Review & Draft</span>
                 <span class="hrd-step-status ${step1Done?'done':(st==='Pending'?'active':'wait')}">
-                    ${isRejected?'<span class="reject">Ditolak</span>':(step1Done?'Selesai':(st==='Pending'?'Sedang direview':'Belum'))}
+                    ${isReject?'<span class="reject">Ditolak</span>':(step1Done?'Selesai':(st==='Pending'?'Sedang direview':'Belum'))}
                 </span>
             </div>
             <div class="hrd-step">
@@ -923,10 +936,12 @@ async function openDetail(payrollId) {
 
         const wtSess   = emp.ot_weekday_sessions||0;
         const doffSess = emp.ot_dayoff_sessions||0;
+        const holSess  = emp.ot_holiday_sessions||0;
         const otBlock  = otAmount > 0 ? `
             <div class="modal-section-title">Rincian Overtime</div>
             ${wtSess>0?`<div class="ot-tier-row"><span class="ot-tier-label"><i class="bi bi-moon-stars"></i> Lembur &gt;10 jam (hari kerja)</span><span class="ot-tier-value">${wtSess}× = ${fmtRupiah(wtSess*OT_RATE.weekday)}</span></div>`:''}
             ${doffSess>0?`<div class="ot-tier-row"><span class="ot-tier-label"><i class="bi bi-calendar-x"></i> Masuk hari libur ≥5 jam</span><span class="ot-tier-value">${doffSess}× = ${fmtRupiah(doffSess*OT_RATE.dayoff)}</span></div>`:''}
+            ${holSess>0?`<div class="ot-tier-row holiday"><span class="ot-tier-label"><i class="bi bi-stars"></i> Masuk hari raya ≥5 jam</span><span class="ot-tier-value">${holSess}× = ${fmtRupiah(emp.ot_holiday_amount != null ? emp.ot_holiday_amount : holSess*OT_RATE.holiday)}</span></div>`:''}
         ` : `<div class="modal-section-title">Overtime</div>
              <div style="font-size:.75rem;color:var(--c-faint);padding:6px 0;">Tidak ada overtime pada periode ini.</div>`;
 
@@ -975,17 +990,17 @@ async function openDetail(payrollId) {
             case 'Pending':
                 btns += `<button class="btn-modal draft"   onclick="quickAction(${payrollId},'Draft');closeModal()"><i class="bi bi-pencil"></i> Draft</button>`;
                 btns += `<button class="btn-modal approve" onclick="quickAction(${payrollId},'Approved');closeModal()"><i class="bi bi-check-lg"></i> Approve</button>`;
-                btns += `<button class="btn-modal reject"  onclick="quickAction(${payrollId},'Rejected');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
+                btns += `<button class="btn-modal reject"  onclick="quickAction(${payrollId},'Reject');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
                 break;
             case 'Draft':
                 btns += `<button class="btn-modal approve" onclick="quickAction(${payrollId},'Approved');closeModal()"><i class="bi bi-check-lg"></i> Approve</button>`;
-                btns += `<button class="btn-modal reject"  onclick="quickAction(${payrollId},'Rejected');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
+                btns += `<button class="btn-modal reject"  onclick="quickAction(${payrollId},'Reject');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
                 break;
             case 'Approved':
                 btns += `<button class="btn-modal done"   onclick="quickAction(${payrollId},'Done');closeModal()"><i class="bi bi-trophy"></i> Tandai Done</button>`;
-                btns += `<button class="btn-modal reject" onclick="quickAction(${payrollId},'Rejected');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
+                btns += `<button class="btn-modal reject" onclick="quickAction(${payrollId},'Reject');closeModal()"><i class="bi bi-x-lg"></i> Reject</button>`;
                 break;
-            case 'Rejected':
+            case 'Reject':
                 btns += `<button class="btn-modal draft" onclick="quickAction(${payrollId},'Draft');closeModal()"><i class="bi bi-arrow-counterclockwise"></i> Kembalikan ke Draft</button>`;
                 break;
             // Done — tidak ada tombol aksi

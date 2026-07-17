@@ -60,11 +60,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'attendance_db',
+        'NAME': 'Final_Capstone',
         'USER': 'postgres',
-        'PASSWORD': '222222',
+        'PASSWORD': '132005',
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '5433',
     }
 }
 
@@ -99,5 +99,5 @@ LOGOUT_REDIRECT_URL   = '/login/'
 RECAPTCHA_PUBLIC_KEY = '6Lddt00tAAAAALY4EU8cyc9WAdWLj9MYFqNm-8DX'
 RECAPTCHA_PRIVATE_KEY = '6Lddt00tAAAAAN5_rnrdFmigdtoRXcGamTSYzaTA'
 # ===== Fonnte WhatsApp OTP =====
-FONNTE_TOKEN = 'aoUuBCGJubekjcSYehri'
+FONNTE_TOKEN = 't2awz2d3NtbbpA8UQVc9'
 FONNTE_API_URL = 'https://api.fonnte.com/send'

@@ -8,6 +8,15 @@
 
 {% block extra_css %}
 <style>
+    /* Semua warna diambil dari variabel body.pov-employee di base.html:
+       --content-text / --content-muted / --content-faint / --content-border
+       untuk teks & border area konten, --card-bg / --card-hover untuk
+       background card (menggantikan --navy-light lama yang tidak konsisten
+       dengan dashboard), --accent / --accent-light / --accent2 untuk aksen,
+       dan --green / --red / --yellow untuk status semantik (nilai RGB pada
+       rgba() di bawah sengaja disamakan dengan hex var tsb: --green=22,163,74
+       --red=220,38,38 --yellow=217,119,6). */
+
     /* ── Page Header ── */
     .payslip-page-hdr {
         display: flex;
@@ -20,11 +29,11 @@
     .payslip-page-hdr h1 {
         font-size: 1.3rem;
         font-weight: 700;
-        color: var(--text);
+        color: var(--content-text);
     }
     .payslip-page-hdr p {
         font-size: .82rem;
-        color: var(--muted);
+        color: var(--content-muted);
         margin-top: 4px;
     }
 
@@ -36,9 +45,9 @@
         flex-wrap: wrap;
     }
     .filter-bar select {
-        background: #162033;
-        border: 1px solid var(--border);
-        color: var(--text);
+        background: var(--input-bg);
+        border: 1px solid var(--content-border);
+        color: var(--content-text);
         padding: 7px 10px;
         border-radius: 8px;
         font-size: .83rem;
@@ -52,7 +61,7 @@
     .filter-bar label {
         font-size: .75rem;
         font-weight: 600;
-        color: var(--muted);
+        color: var(--content-muted);
         text-transform: uppercase;
         letter-spacing: .4px;
     }
@@ -62,7 +71,7 @@
         gap: 4px;
     }
 
-    /* ── Not-yet-payday banner ── */
+    /* ── Not-yet-payday / processing banner (semantik: yellow) ── */
     .payday-notice {
         background: rgba(217,119,6,0.12);
         border: 1px solid rgba(217,119,6,0.35);
@@ -85,20 +94,20 @@
     .payday-notice-icon svg {
         width: 24px;
         height: 24px;
-        stroke: #fcd34d;
+        stroke: #fbbf24;
     }
     .payday-notice-body h3 {
         font-size: .95rem;
         font-weight: 700;
-        color: #fcd34d;
+        color: #fbbf24;
         margin-bottom: 6px;
     }
     .payday-notice-body p {
         font-size: .82rem;
-        color: rgba(252,211,77,0.75);
+        color: rgba(251,191,36,0.8);
         line-height: 1.6;
     }
-    .payday-notice-body strong { color: #fcd34d; }
+    .payday-notice-body strong { color: #fbbf24; }
     .payday-counter {
         display: inline-flex;
         align-items: center;
@@ -110,15 +119,52 @@
         padding: 4px 14px;
         font-size: .78rem;
         font-weight: 600;
-        color: #fcd34d;
+        color: #fbbf24;
     }
     .payday-counter svg {
         width: 14px;
         height: 14px;
-        stroke: #fcd34d;
+        stroke: #fbbf24;
     }
 
-    /* ── Empty state (no attendance yet) ── */
+    /* ── Rejected banner (semantik: red) ── */
+    .rejected-notice {
+        background: rgba(220,38,38,0.10);
+        border: 1px solid rgba(220,38,38,0.3);
+        border-radius: 12px;
+        padding: 28px 32px;
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+    .rejected-notice-icon {
+        width: 46px;
+        height: 46px;
+        background: rgba(220,38,38,0.18);
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+    }
+    .rejected-notice-icon svg {
+        width: 24px;
+        height: 24px;
+        stroke: #f87171;
+    }
+    .rejected-notice-body h3 {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #f87171;
+        margin-bottom: 6px;
+    }
+    .rejected-notice-body p {
+        font-size: .82rem;
+        color: rgba(248,113,113,0.85);
+        line-height: 1.6;
+    }
+
+    /* ── Empty state (no payroll / no attendance yet) ── */
     .empty-state {
         text-align: center;
         padding: 56px 24px;
@@ -126,20 +172,20 @@
     .empty-state-icon {
         width: 64px;
         height: 64px;
-        background: rgba(59,130,246,0.1);
+        background: var(--accent-glow);
         border-radius: 50%;
         display: grid;
         place-items: center;
         margin: 0 auto 18px;
     }
     .empty-state-icon svg { width: 30px; height: 30px; stroke: var(--accent-light); }
-    .empty-state h3 { font-size: .98rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .empty-state p  { font-size: .82rem; color: var(--muted); line-height: 1.65; max-width: 360px; margin: 0 auto; }
+    .empty-state h3 { font-size: .98rem; font-weight: 700; color: var(--content-text); margin-bottom: 8px; }
+    .empty-state p  { font-size: .82rem; color: var(--content-muted); line-height: 1.65; max-width: 360px; margin: 0 auto; }
 
-    /* ── Payslip card (visible on payday) ── */
+    /* ── Payslip card (visible when status = Approved / Done) ── */
     .payslip-card {
-        background: var(--navy-light);
-        border: 1px solid var(--border);
+        background: var(--card-bg);
+        border: 1px solid var(--content-border);
         border-radius: 14px;
         overflow: hidden;
         animation: fadeUp .35s ease both;
@@ -151,7 +197,7 @@
 
     .payslip-top {
         padding: 20px 24px;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--content-border);
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
@@ -161,7 +207,7 @@
     .payslip-period-label {
         font-size: .72rem;
         font-weight: 700;
-        color: var(--muted);
+        color: var(--content-muted);
         text-transform: uppercase;
         letter-spacing: .6px;
         margin-bottom: 4px;
@@ -169,7 +215,7 @@
     .payslip-period-val {
         font-size: 1.15rem;
         font-weight: 700;
-        color: var(--text);
+        color: var(--content-text);
     }
     .payslip-status-wrap {
         display: flex;
@@ -181,18 +227,18 @@
     /* ── Take Home Pay hero ── */
     .takehome-block {
         padding: 22px 24px;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--content-border);
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
         flex-wrap: wrap;
-        background: rgba(59,130,246,0.04);
+        background: rgba(255,255,255,0.02);
     }
     .takehome-label {
         font-size: .78rem;
         font-weight: 600;
-        color: var(--muted);
+        color: var(--content-muted);
         text-transform: uppercase;
         letter-spacing: .5px;
         margin-bottom: 6px;
@@ -200,20 +246,20 @@
     .takehome-amount {
         font-size: 2rem;
         font-weight: 800;
-        color: var(--text);
+        color: var(--content-text);
         letter-spacing: -.5px;
         line-height: 1;
     }
     .takehome-meta {
         font-size: .75rem;
-        color: var(--muted);
+        color: var(--content-muted);
         margin-top: 6px;
     }
 
     /* ── Attendance summary strip ── */
     .attendance-strip {
-        background: rgba(15,31,56,0.6);
-        border: 1px solid rgba(59,130,246,0.18);
+        background: var(--card-hover);
+        border: 1px solid var(--content-border);
         border-radius: 10px;
         padding: 14px 18px;
         min-width: 260px;
@@ -231,7 +277,7 @@
         align-items: center;
         gap: 8px;
         font-size: .8rem;
-        color: var(--text);
+        color: var(--content-text);
         margin-bottom: 6px;
     }
     .att-row:last-child { margin-bottom: 0; }
@@ -240,16 +286,16 @@
         border-radius: 50%;
         flex-shrink: 0;
     }
-    .att-dot-green  { background: #16a34a; }
-    .att-dot-yellow { background: #d97706; }
-    .att-dot-blue   { background: #3b82f6; }
-    .att-row-label  { color: var(--muted); flex: 1; }
-    .att-row-val    { font-weight: 700; color: var(--text); }
+    .att-dot-green  { background: var(--green); }
+    .att-dot-yellow { background: var(--yellow); }
+    .att-dot-blue   { background: var(--accent); }
+    .att-row-label  { color: var(--content-muted); flex: 1; }
+    .att-row-val    { font-weight: 700; color: var(--content-text); }
 
     /* ── Meta info bar ── */
     .meta-bar {
         padding: 12px 24px;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--content-border);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -257,26 +303,26 @@
         gap: 8px;
         background: rgba(255,255,255,0.02);
     }
-    .meta-bar-left { font-size: .78rem; color: var(--muted); line-height: 1.7; }
-    .meta-bar-left span { color: var(--text); font-weight: 500; }
+    .meta-bar-left { font-size: .78rem; color: var(--content-muted); line-height: 1.7; }
+    .meta-bar-left span { color: var(--content-text); font-weight: 500; }
 
     /* ── Breakdown grid ── */
     .breakdown-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0;
-        border-top: 1px solid var(--border);
+        border-top: 1px solid var(--content-border);
     }
     .breakdown-col {
         padding: 20px 24px;
     }
     .breakdown-col:first-child {
-        border-right: 1px solid var(--border);
+        border-right: 1px solid var(--content-border);
     }
     .breakdown-col-title {
         font-size: .72rem;
         font-weight: 700;
-        color: var(--muted);
+        color: var(--content-muted);
         text-transform: uppercase;
         letter-spacing: .5px;
         margin-bottom: 14px;
@@ -290,8 +336,8 @@
         font-size: .83rem;
     }
     .breakdown-row:last-of-type { border-bottom: none; }
-    .breakdown-row .bl { color: var(--muted); }
-    .breakdown-row .bv { font-weight: 600; color: var(--text); }
+    .breakdown-row .bl { color: var(--content-muted); }
+    .breakdown-row .bv { font-weight: 600; color: var(--content-text); }
 
     .breakdown-total {
         margin-top: 12px;
@@ -306,19 +352,19 @@
     .breakdown-total-earnings {
         background: rgba(22,163,74,0.15);
         border: 1px solid rgba(22,163,74,0.3);
-        color: #86efac;
+        color: #4ade80;
     }
     .breakdown-total-deductions {
         background: rgba(220,38,38,0.12);
         border: 1px solid rgba(220,38,38,0.25);
-        color: #fca5a5;
+        color: #f87171;
     }
     .breakdown-net {
         margin-top: 10px;
         padding: 10px 14px;
         border-radius: 8px;
-        background: rgba(59,130,246,0.12);
-        border: 1px solid rgba(59,130,246,0.25);
+        background: var(--accent-glow);
+        border: 1px solid rgba(255,255,255,0.18);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -352,18 +398,18 @@
 
     /* ── History list ── */
     .history-card {
-        background: var(--navy-light);
-        border: 1px solid var(--border);
+        background: var(--card-bg);
+        border: 1px solid var(--content-border);
         border-radius: 14px;
         margin-top: 24px;
         overflow: hidden;
     }
     .history-card-hdr {
         padding: 14px 20px;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--content-border);
         font-size: .85rem;
         font-weight: 700;
-        color: var(--text);
+        color: var(--content-text);
     }
     .history-item {
         display: flex;
@@ -377,17 +423,17 @@
         gap: 8px;
     }
     .history-item:last-child { border-bottom: none; }
-    .history-item:hover { background: rgba(255,255,255,0.03); }
-    .history-period { font-weight: 600; color: var(--text); }
-    .history-amount { font-weight: 700; color: #86efac; }
+    .history-item:hover { background: rgba(255,255,255,0.04); }
+    .history-period { font-weight: 600; color: var(--content-text); }
+    .history-amount { font-weight: 700; color: #4ade80; }
     .history-actions { display: flex; align-items: center; gap: 8px; }
     .btn-sm-outline {
         display: inline-flex; align-items: center; gap: 5px;
         padding: 5px 12px; border-radius: 6px;
         font-size: .75rem; font-weight: 600;
         font-family: inherit; cursor: pointer;
-        border: 1px solid var(--border);
-        background: transparent; color: var(--text);
+        border: 1px solid var(--content-border);
+        background: transparent; color: var(--content-text);
         text-decoration: none;
         transition: border-color .2s, color .2s;
     }
@@ -395,7 +441,7 @@
 
     @media (max-width: 700px) {
         .breakdown-grid { grid-template-columns: 1fr; }
-        .breakdown-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+        .breakdown-col:first-child { border-right: none; border-bottom: 1px solid var(--content-border); }
         .takehome-amount { font-size: 1.6rem; }
         .attendance-strip { min-width: unset; width: 100%; }
     }
@@ -446,73 +492,20 @@
     </div>
 </div>
 
-{% if payroll and not payroll.is_released %}
-<div class="payday-notice">
-    <div class="payday-notice-icon">
-        <svg fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-        </svg>
-    </div>
-    <div class="payday-notice-body">
-        <h3>Payslip Not Yet Available</h3>
-        <p>
-            Your payslip for <strong>{{ payroll.period_display }}</strong> has been processed but will only be
-            released on the scheduled payday: <strong>{{ payroll.payday_date|date:"d F Y" }}</strong>.
-        </p>
-        <div class="payday-counter">
-            <svg fill="none" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/>
-            </svg>
-            <span id="days-countdown">{{ days_until_payday }} day{{ days_until_payday|pluralize }} remaining</span>
-        </div>
-    </div>
-</div>
-
-{% if attendance_summary %}
-<div class="card">
-    <div class="card-hdr">
-        <h3>Attendance Summary — {{ payroll.period_display }}</h3>
-        <span class="badge badge-yellow">Pending Release</span>
-    </div>
-    <div class="card-body">
-        <div class="grid-4">
-            <div class="stat-card">
-                <div class="stat-label">Working Hours</div>
-                <div class="stat-value">{{ attendance_summary.total_working_hours }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Present Days</div>
-                <div class="stat-value">{{ attendance_summary.total_present }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Late</div>
-                <div class="stat-value">{{ attendance_summary.total_late }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Overtime Hours</div>
-                <div class="stat-value">{{ attendance_summary.total_overtime_hours }}</div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-{# ─────────────────────────────────────────────────── #}
-{% elif payroll and payroll.is_released %}
+{% if payroll and payroll.status in released_statuses %}
+{# ══════════════ PAYROLL SUDAH FINAL (Approved/Done) — TAMPILKAN DETAIL ══════════════ #}
 <div class="payslip-card">
 
     <div class="payslip-top">
         <div>
             <div class="payslip-period-label">Pay Period</div>
-            <div class="payslip-period-val">{{ payroll.period_display }}</div>
+            <div class="payslip-period-val">{{ payroll.period_label }}</div>
         </div>
         <div class="payslip-status-wrap">
             <span class="badge badge-green" style="font-size:.78rem; padding:5px 14px;">
-                ✓ &nbsp;Approved
+                ✓ &nbsp;{{ payroll.get_status_display }}
             </span>
-            <a href="{% url 'employee-payroll-download' payroll.pk %}" class="btn-download">
+            <a href="{% url 'employee-payslip-pdf' %}?month={{ selected_month }}&year={{ selected_year }}" class="btn-download">
                 <svg fill="none" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -525,14 +518,14 @@
     <div class="takehome-block">
         <div>
             <div class="takehome-label">Take Home Pay</div>
-            <div class="takehome-amount">IDR {{ payroll.take_home_pay|floatformat:0|intcomma }}</div>
+            <div class="takehome-amount">IDR {{ payroll.net_salary|floatformat:0|intcomma }}</div>
             <div class="takehome-meta">
-                Generated on: {{ payroll.generated_date|date:"d F Y" }} &nbsp;·&nbsp;
-                Validated by: <span style="color:var(--accent-light)">{{ payroll.validated_by }}</span>
+                Generated on: {{ payroll.created_at|date:"d F Y" }}
+                {% if payroll.updated_at %} &nbsp;·&nbsp; Last updated: {{ payroll.updated_at|date:"d F Y" }}{% endif %}
             </div>
         </div>
         <div class="attendance-strip">
-            <div class="attendance-strip-title">Attendance Summary — {{ payroll.period_display }}</div>
+            <div class="attendance-strip-title">Attendance Summary — {{ payroll.period_label }}</div>
             <div class="att-row">
                 <span class="att-dot att-dot-green"></span>
                 <span class="att-row-label">Total Working Hours</span>
@@ -558,10 +551,10 @@
 
     <div class="meta-bar">
         <div class="meta-bar-left">
-            Generated on: <span>{{ payroll.generated_date|date:"d F Y" }}</span><br>
-            Validated by: <span>{{ payroll.validated_by }}</span>
+            Period: <span>{{ payroll.period_start|date:"d M Y" }} – {{ payroll.period_end|date:"d M Y" }}</span><br>
+            Status: <span>{{ payroll.get_status_display }}</span>
         </div>
-        <p style="font-size:.73rem; color:var(--faint); font-style:italic;">
+        <p style="font-size:.73rem; color:var(--content-faint); font-style:italic;">
             Payroll automatically calculated from validated attendance records
         </p>
     </div>
@@ -573,15 +566,11 @@
 
             <div class="breakdown-row">
                 <span class="bl">Base Salary</span>
-                <span class="bv">IDR {{ payroll.base_salary|floatformat:0|intcomma }}</span>
+                <span class="bv">IDR {{ payroll.basic_salary|floatformat:0|intcomma }}</span>
             </div>
             <div class="breakdown-row">
                 <span class="bl">Allowance</span>
                 <span class="bv">IDR {{ payroll.allowance|floatformat:0|intcomma }}</span>
-            </div>
-            <div class="breakdown-row">
-                <span class="bl">Benefits</span>
-                <span class="bv">IDR {{ payroll.benefits|floatformat:0|intcomma }}</span>
             </div>
             <div class="breakdown-row">
                 <span class="bl">Overtime Pay</span>
@@ -589,8 +578,8 @@
             </div>
 
             <div class="breakdown-total breakdown-total-earnings">
-                <span>Total Earning</span>
-                <span>IDR {{ payroll.total_earnings|floatformat:0|intcomma }}</span>
+                <span>Total Earning (Gross)</span>
+                <span>IDR {{ payroll.gross_salary|floatformat:0|intcomma }}</span>
             </div>
         </div>
 
@@ -598,25 +587,17 @@
             <div class="breakdown-col-title">Deductions</div>
 
             <div class="breakdown-row">
-                <span class="bl">BPJS</span>
-                <span class="bv">IDR {{ payroll.bpjs_deduction|floatformat:0|intcomma }}</span>
+                <span class="bl">Absence Deduction</span>
+                <span class="bv">IDR {{ payroll.deduction|floatformat:0|intcomma }}</span>
             </div>
             <div class="breakdown-row">
-                <span class="bl">Late Deduction</span>
-                <span class="bv">IDR {{ payroll.late_deduction|floatformat:0|intcomma }}</span>
-            </div>
-            <div class="breakdown-row">
-                <span class="bl">PPh21</span>
-                <span class="bv">IDR {{ payroll.pph21|floatformat:0|intcomma }}</span>
-            </div>
-            <div class="breakdown-row">
-                <span class="bl">Total Deduction</span>
-                <span class="bv">IDR {{ payroll.total_deductions|floatformat:0|intcomma }}</span>
+                <span class="bl">Late Penalty</span>
+                <span class="bv">IDR {{ payroll.late_penalty|floatformat:0|intcomma }}</span>
             </div>
 
             <div class="breakdown-total breakdown-total-deductions">
                 <span>Total Deductions</span>
-                <span>IDR {{ payroll.total_deductions|floatformat:0|intcomma }}</span>
+                <span>IDR {{ payroll.total_deduction|floatformat:0|intcomma }}</span>
             </div>
 
             <div class="breakdown-net">
@@ -627,24 +608,81 @@
     </div>
 </div>
 
-{% elif not attendance_summary or not attendance_summary.has_data %}
-<div class="card">
-    <div class="empty-state">
-        <div class="empty-state-icon">
-            <svg fill="none" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-            </svg>
-        </div>
-        <h3>No Payslip Available</h3>
+{% elif payroll and payroll.status == 'Reject' or payroll.status == 'Supervisor Rejected' %}
+{# ══════════════ PAYROLL DITOLAK ══════════════ #}
+<div class="rejected-notice">
+    <div class="rejected-notice-icon">
+        <svg fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </div>
+    <div class="rejected-notice-body">
+        <h3>Payroll Rejected</h3>
         <p>
-            There is no payslip data for the selected period. Payslip will be generated automatically
-            after your attendance data for the full month is validated and released on payday.
+            Your payroll for <strong>{{ payroll.period_label }}</strong> was rejected during the approval process.
+            Please contact HRD for more information.
         </p>
     </div>
 </div>
 
-{% elif attendance_summary.has_data and not payroll %}
+{% elif payroll %}
+{# ══════════════ PAYROLL SUDAH DI-GENERATE, MASIH DALAM PROSES APPROVAL ══════════════ #}
+<div class="payday-notice">
+    <div class="payday-notice-icon">
+        <svg fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+    </div>
+    <div class="payday-notice-body">
+        <h3>Payslip Not Yet Available</h3>
+        <p>
+            Your payroll for <strong>{{ payroll.period_label }}</strong> has been processed and is currently
+            <strong>{{ payroll.get_status_display }}</strong>. It will be visible here once fully approved,
+            around the scheduled payday: <strong>{{ payday_date_label }}</strong>.
+        </p>
+        <div class="payday-counter">
+            <svg fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/>
+            </svg>
+            <span id="days-countdown">{{ days_until_payday }} day{{ days_until_payday|pluralize }} remaining</span>
+        </div>
+    </div>
+</div>
+
+{% if attendance_summary %}
+<div class="card">
+    <div class="card-hdr">
+        <h3>Attendance Summary — {{ payroll.period_label }}</h3>
+        <span class="badge badge-yellow">{{ payroll.get_status_display }}</span>
+    </div>
+    <div class="card-body">
+        <div class="grid-4">
+            <div class="stat-card">
+                <div class="stat-label">Working Hours</div>
+                <div class="stat-value">{{ attendance_summary.total_working_hours }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Present Days</div>
+                <div class="stat-value">{{ attendance_summary.total_present }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Late</div>
+                <div class="stat-value">{{ attendance_summary.total_late }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Overtime Hours</div>
+                <div class="stat-value">{{ attendance_summary.total_overtime_hours }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% elif attendance_summary.has_data %}
+{# ══════════════ ADA ABSENSI TAPI HRD BELUM GENERATE PAYROLL SAMA SEKALI ══════════════ #}
 <div class="payday-notice">
     <div class="payday-notice-icon">
         <svg fill="none" viewBox="0 0 24 24">
@@ -656,8 +694,8 @@
         <h3>Attendance Recorded — Awaiting Payroll Processing</h3>
         <p>
             Your attendance for <strong>{{ period_label }}</strong> has been recorded.
-            The HRD team is currently processing payroll. Your payslip will be available on
-            <strong>payday ({{ payday_date_label }})</strong>.
+            The HRD team has not generated payroll for this period yet. Your payslip will be
+            available on <strong>payday ({{ payday_date_label }})</strong>.
         </p>
         <div class="payday-counter">
             <svg fill="none" viewBox="0 0 24 24">
@@ -695,6 +733,24 @@
         </div>
     </div>
 </div>
+
+{% else %}
+{# ══════════════ TIDAK ADA APA-APA SAMA SEKALI UNTUK PERIODE INI ══════════════ #}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+            </svg>
+        </div>
+        <h3>No Payslip Available</h3>
+        <p>
+            There is no payslip data for the selected period ({{ period_label }}). Payslip will be generated
+            after your attendance data for the full payroll period is validated and processed by HRD.
+        </p>
+    </div>
+</div>
 {% endif %}
 
 {% if payslip_history %}
@@ -703,13 +759,13 @@
     {% for h in payslip_history %}
     <div class="history-item">
         <div>
-            <div class="history-period">{{ h.period_display }}</div>
-            <div style="font-size:.73rem; color:var(--muted);">Released {{ h.released_date|date:"d M Y" }}</div>
+            <div class="history-period">{{ h.period_label }}</div>
+            <div style="font-size:.73rem; color:var(--content-muted);">Updated {{ h.updated_at|date:"d M Y" }}</div>
         </div>
-        <div class="history-amount">IDR {{ h.take_home_pay|floatformat:0|intcomma }}</div>
+        <div class="history-amount">IDR {{ h.net_salary|floatformat:0|intcomma }}</div>
         <div class="history-actions">
-            <span class="badge badge-green" style="font-size:.7rem;">Approved</span>
-            <a href="{% url 'employee-payroll-download' h.pk %}" class="btn-sm-outline">
+            <span class="badge badge-green" style="font-size:.7rem;">{{ h.get_status_display }}</span>
+            <a href="{% url 'employee-payslip-pdf' %}?month={{ h.period_end.month }}&year={{ h.period_end.year }}" class="btn-sm-outline">
                 <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>

@@ -5,38 +5,38 @@
 
 {% block extra_css %}
 <style>
-/* ── VARIABLES LOKAL (tidak bergantung base.html) ── */
-:root {
-    --card-bg    : #1a2d4a;
-    --card-border: rgba(255,255,255,0.10);
-    --text-bright: #ffffff;
-    --text-mid   : #c8dff2;
-    --text-muted : #7a99b8;
-    --row-divider: rgba(255,255,255,0.07);
-}
+/* Tidak lagi mendefinisikan :root baru — seluruh warna diambil dari
+   variabel body.pov-employee yang sudah ada di base.html supaya dashboard
+   ini otomatis konsisten dengan tema (navy #022e4c / accent #517493 /
+   accent2 #56061d) dan ikut berubah kalau base.html di-update. */
 
 /* ── PAGE HEADER ── */
-.page-welcome { font-size: 1.3rem; font-weight: 700; color: #ffffff; margin-bottom: 6px; }
-.date-label   { font-size: .78rem; color: #7a99b8; margin-bottom: 20px; display: flex; align-items: center; gap: 6px; }
+.page-welcome { font-size: 1.3rem; font-weight: 700; color: var(--content-text); margin-bottom: 6px; }
+.date-label   { font-size: .78rem; color: var(--content-faint); margin-bottom: 20px; display: flex; align-items: center; gap: 6px; }
 
-/* ── CHECK-IN PANEL ── */
+/* ── CHECK-IN PANEL ──
+   Sebelumnya background putih solid (kontras dengan tema navy). Sekarang
+   pakai --card-bg + aksen --accent supaya menyatu, tapi tetap "menonjol"
+   lewat border accent dan sedikit glow. */
 .checkin-panel {
-    background: #ffffff; border: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(135deg, var(--card-bg), var(--card-hover));
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-glow) inset;
     border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 12px;
 }
-.ci-time  { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #0f1e36; }
-.ci-label { font-size: .78rem; color: #6b7a8d; margin-top: 3px; font-weight: 500; }
+.ci-time  { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--content-text); }
+.ci-label { font-size: .78rem; color: var(--content-muted); margin-top: 3px; font-weight: 500; }
 .ci-status { display: flex; align-items: center; gap: 8px; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; animation: blink 2s ease-in-out infinite; }
-.dot-in  { background: #16a34a; }
-.dot-out { background: #dc2626; }
+.dot-in  { background: var(--green); }
+.dot-out { background: var(--red); }
 @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
 .ci-actions { display: flex; gap: 10px; }
 .btn-ci {
     padding: 10px 22px; border-radius: 8px;
-    background: #16a34a; color: #fff;
+    background: var(--green); color: #fff;
     border: none; font-family: var(--font);
     font-size: .88rem; font-weight: 700;
     cursor: pointer; transition: background .2s;
@@ -50,100 +50,99 @@
     gap: 14px; margin-bottom: 22px;
 }
 .stat-card {
-    background: var(--card-bg); border: 1px solid var(--card-border);
+    background: var(--card-bg); border: 1px solid var(--content-border);
     border-radius: 12px; padding: 18px 20px;
+    transition: background .2s ease;
 }
+.stat-card:hover { background: var(--card-hover); }
 .sc-top   { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 
-/* LABEL — putih terang */
-.sc-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .65px; color: #c8dff2; line-height: 1.35; }
+.sc-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .65px; color: var(--content-muted); line-height: 1.35; }
 
 .sc-badge { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: .9rem; flex-shrink: 0; }
-.sb-orange { background: rgba(249,115,22,.25); }
-.sb-yellow { background: rgba(234,179,8,.25); }
-.sb-blue   { background: rgba(59,130,246,.25); }
-.sb-green  { background: rgba(34,197,94,.25); }
+.sb-orange { background: rgba(217,119,6,.25); }   /* var(--yellow) family */
+.sb-yellow { background: rgba(217,119,6,.20); }
+.sb-blue   { background: rgba(81,116,147,.30); }  /* var(--accent) family */
+.sb-green  { background: rgba(22,163,74,.25); }   /* var(--green) family */
 
-/* ANGKA — putih penuh */
-.sc-value  { font-size: 2.4rem; font-weight: 700; color: #ffffff; line-height: 1; margin-bottom: 8px; }
+.sc-value  { font-size: 2.4rem; font-weight: 700; color: var(--content-text); line-height: 1; margin-bottom: 8px; }
 
-/* FOOTER — cukup terbaca */
-.sc-footer { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: #7a99b8; font-weight: 500; }
-.dot-o { background: #fb923c; width:7px; height:7px; border-radius:50%; }
-.dot-y { background: #facc15; width:7px; height:7px; border-radius:50%; }
-.dot-g { background: #4ade80; width:7px; height:7px; border-radius:50%; }
+.sc-footer { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: var(--content-faint); font-weight: 500; }
+.dot-o { background: var(--yellow); width:7px; height:7px; border-radius:50%; }
+.dot-y { background: var(--yellow); width:7px; height:7px; border-radius:50%; }
+.dot-g { background: var(--green);  width:7px; height:7px; border-radius:50%; }
 
 /* ── BOTTOM GRID ── */
 .bottom-grid { display: grid; grid-template-columns: 290px 1fr; gap: 20px; align-items: start; }
 
 /* ── WORK SUMMARY ── */
 .ws-card {
-    background: var(--card-bg); border: 1px solid var(--card-border);
+    background: var(--card-bg); border: 1px solid var(--content-border);
     border-radius: 12px; padding: 18px 20px;
 }
 .ws-title {
-    font-size: .9rem; font-weight: 700; color: #ffffff;
+    font-size: .9rem; font-weight: 700; color: var(--content-text);
     margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
 .ws-title-icon {
-    width: 18px; height: 18px; background: #3b82f6; color: #fff;
+    width: 18px; height: 18px; background: var(--accent2); color: #fff;
     border-radius: 50%; display: grid; place-items: center;
     font-size: .62rem; font-weight: 800; flex-shrink: 0;
 }
 .ws-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 0; border-bottom: 1px solid var(--row-divider); font-size: .84rem;
+    padding: 9px 0; border-bottom: 1px solid var(--content-border); font-size: .84rem;
 }
 .ws-row:last-child { border-bottom: none; }
-.ws-lbl { color: #7a99b8; font-weight: 500; }
-.ws-val { font-weight: 700; color: #ffffff; }
+.ws-lbl { color: var(--content-muted); font-weight: 500; }
+.ws-val { font-weight: 700; color: var(--content-text); }
+.ws-val.overtime { color: var(--accent-light); }
 
 /* ── ATTENDANCE TABLE ── */
 .att-card {
-    background: var(--card-bg); border: 1px solid var(--card-border);
+    background: var(--card-bg); border: 1px solid var(--content-border);
     border-radius: 12px; overflow: hidden;
 }
 .att-card-hdr {
-    padding: 14px 20px; border-bottom: 1px solid var(--card-border);
+    padding: 14px 20px; border-bottom: 1px solid var(--content-border);
     display: flex; align-items: center; justify-content: space-between;
 }
-.att-card-hdr h3 { font-size: .92rem; font-weight: 700; color: #ffffff; }
+.att-card-hdr h3 { font-size: .92rem; font-weight: 700; color: var(--content-text); }
 
-/* Tombol View All */
 .btn-view-all {
     font-size: .76rem; padding: 6px 14px; border-radius: 7px;
-    border: 1px solid rgba(255,255,255,0.25); color: #c8dff2;
+    border: 1px solid var(--content-border); color: var(--content-muted);
     background: transparent; cursor: pointer;
     font-family: var(--font); font-weight: 600;
-    text-decoration: none; transition: background .15s;
+    text-decoration: none; transition: background .15s, color .15s, border-color .15s;
 }
-.btn-view-all:hover { background: rgba(255,255,255,0.08); }
+.btn-view-all:hover { background: rgba(255,255,255,0.08); color: var(--content-text); border-color: var(--accent); }
 
 /* TABLE HEADER */
 .table-wrap table { width: 100%; border-collapse: collapse; }
 .table-wrap thead th {
     font-size: .7rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .6px; color: #7a99b8;
+    letter-spacing: .6px; color: var(--content-muted);
     background: rgba(255,255,255,0.04);
     padding: 10px 16px; text-align: left;
-    border-bottom: 1px solid var(--card-border);
+    border-bottom: 1px solid var(--content-border);
 }
 
 /* TABLE BODY */
 .table-wrap tbody td {
     font-size: .84rem; padding: 11px 16px;
-    color: #c8dff2; font-weight: 500;
+    color: var(--content-text); font-weight: 500;
 }
-.table-wrap tbody tr { border-bottom: 1px solid var(--row-divider); }
+.table-wrap tbody tr { border-bottom: 1px solid var(--content-border); }
 .table-wrap tbody tr:last-child { border-bottom: none; }
-.table-wrap tbody tr:hover { background: rgba(255,255,255,0.04); }
+.table-wrap tbody tr:hover td { background: rgba(255,255,255,0.04); }
 
 /* EMPTY STATE */
 .table-empty {
     text-align: center; padding: 36px 20px;
-    color: #7a99b8; font-size: .84rem; line-height: 1.9;
+    color: var(--content-faint); font-size: .84rem; line-height: 1.9;
 }
-.table-empty a { color: #60a5fa; font-weight: 700; text-decoration: none; }
+.table-empty a { color: var(--accent-light); font-weight: 700; text-decoration: none; }
 .table-empty a:hover { text-decoration: underline; }
 
 @media (max-width: 1100px) { .stat-cards-row { grid-template-columns: repeat(2,1fr); } }
@@ -184,10 +183,10 @@
     <div class="ci-status">
         {% if today_attendance and today_attendance.check_in and not today_attendance.check_out %}
             <div class="status-dot dot-in"></div>
-            <span style="font-size:.84rem;color:#16a34a;font-weight:700;">Working</span>
+            <span style="font-size:.84rem;color:#4ade80;font-weight:700;">Working</span>
         {% else %}
             <div class="status-dot dot-out"></div>
-            <span style="font-size:.84rem;color:#94a3b8;font-weight:600;">Offline</span>
+            <span style="font-size:.84rem;color:var(--content-muted);font-weight:600;">Offline</span>
         {% endif %}
     </div>
 
@@ -252,7 +251,7 @@
         </div>
         <div class="ws-row">
             <span class="ws-lbl">Overtime</span>
-            <span class="ws-val" style="color:#60a5fa;">{{ work_summary.overtime|default:"0h" }}</span>
+            <span class="ws-val overtime">{{ work_summary.overtime|default:"0h" }}</span>
         </div>
         <div class="ws-row">
             <span class="ws-lbl">Average Daily</span>
@@ -270,7 +269,7 @@
                         {% widthratio ontime_count attendance_count 100 %}%
                     </span>
                 {% else %}
-                    <span class="badge badge-gray" style="color:#7a99b8;">—</span>
+                    <span class="badge badge-gray">—</span>
                 {% endif %}
             </span>
         </div>

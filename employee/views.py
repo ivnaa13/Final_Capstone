@@ -46,6 +46,22 @@ def _get_role(user):
     except Exception:
         return 'hrd' if user.is_staff else 'employee'
 
+PAYROLL_CUTOFF_DAY = 20
+
+
+def _payroll_range(year: int, month: int):
+  
+    import datetime as dt_module
+    end = dt_module.date(year, month, PAYROLL_CUTOFF_DAY)
+
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+
+    start = dt_module.date(prev_year, prev_month, PAYROLL_CUTOFF_DAY + 1)
+    return start, end
+
 
 def register_view(request):
     form = RegisterForm(request.POST or None)
@@ -57,10 +73,6 @@ def register_view(request):
         messages.error(request, 'Please fix the errors below.')
     return render(request, 'register.html', {'form': form})
 
-
-# ========================================================
-# LOGIN FLOW: Username/Password + CAPTCHA -> OTP WhatsApp
-# ========================================================
 
 def login_view(request):
     """Step 1: Login dengan username, password, CAPTCHA -> kirim OTP WA"""
@@ -182,10 +194,6 @@ def logout_view(request):
     messages.info(request, 'You have been logged out.')
     return redirect('login')
 
-
-# ========================================================
-# DASHBOARD & FITUR LAIN
-# ========================================================
 
 @login_required
 def dashboard(request):
@@ -550,22 +558,27 @@ def payroll(request):
 
     selected_month = max(1, min(12, selected_month))
 
+    profile_obj  = getattr(request.user, 'profile', None)
+    employee_obj = getattr(profile_obj, 'employee', None)
+
+    period_start, period_end = _payroll_range(selected_year, selected_month)
+
     payroll_obj  = None
     PayrollModel = None
-    try:
-        from .models import Payroll as PayrollModel
-        payroll_obj = PayrollModel.objects.filter(
-            user=request.user,
-            month=selected_month,
-            year=selected_year,
-        ).first()
-    except Exception:
-        pass
-
+    if employee_obj is not None:
+        try:
+            from .models import Payroll as PayrollModel
+            payroll_obj = PayrollModel.objects.filter(
+                employee=employee_obj,
+                period_start=period_start,
+                period_end=period_end,
+            ).first()
+        except Exception:
+            pass
+        
     att_qs = Attendance.objects.filter(
         user=request.user,
-        date__month=selected_month,
-        date__year=selected_year,
+        date__range=(period_start, period_end),
     )
     has_data       = att_qs.exists()
     total_hours    = sum(a.duration_minutes for a in att_qs) / 60 if has_data else 0
@@ -595,16 +608,16 @@ def payroll(request):
         })
 
     payslip_history = []
-    if PayrollModel is not None:
+    if PayrollModel is not None and employee_obj is not None:
         try:
             payslip_history = list(
                 PayrollModel.objects.filter(
-                    user=request.user,
-                    is_released=True,
+                    employee=employee_obj,
+                    status__in=['Done', 'Approved'],
                 ).exclude(
-                    month=selected_month,
-                    year=selected_year,
-                ).order_by('-year', '-month')[:12]
+                    period_start=period_start,
+                    period_end=period_end,
+                ).order_by('-period_start')[:12]
             )
         except Exception:
             pass
@@ -618,9 +631,10 @@ def payroll(request):
     period_label      = f'{calendar.month_name[selected_month]} {selected_year}'
     payday_date_label = payday.strftime('%d %B %Y')
     year_range        = list(range(today.year - 2, today.year + 1))
-
+    
     return render(request, 'employee/payslip.html', {
         'payroll':            payroll_obj,
+        'released_statuses':  ['Approved', 'Done'],
         'attendance_summary': attendance_summary,
         'overtime_details':   overtime_details,
         'payslip_history':    payslip_history,
@@ -642,12 +656,29 @@ def payslip_pdf(request):
     except (ValueError, TypeError):
         month, year = today.month, today.year
 
+    profile_obj  = getattr(request.user, 'profile', None)
+    employee_obj = getattr(profile_obj, 'employee', None)
+    if employee_obj is None:
+        return HttpResponse('Data employee tidak ditemukan.', content_type='text/plain', status=404)
+
+    period_start, period_end = _payroll_range(year, month)
+
     try:
         from .models import Payroll as PayrollModel
         payroll_obj = PayrollModel.objects.get(
-            user=request.user, month=month, year=year)
+            employee=employee_obj,
+            period_start=period_start,
+            period_end=period_end,
+        )
     except Exception:
         return HttpResponse('Payroll not found.', content_type='text/plain', status=404)
+
+    RELEASED_STATUSES = ['Approved', 'Done']
+    if payroll_obj.status not in RELEASED_STATUSES:
+        return HttpResponse(
+            'Payslip belum tersedia — masih menunggu proses approval HRD.',
+            content_type='text/plain', status=403
+        )
 
     try:
         from reportlab.pdfgen import canvas as rl_canvas
@@ -678,7 +709,7 @@ def payslip_pdf(request):
         c.drawString(40, y, f'Pay Period: {month_name} {year}')
         c.setFont('Helvetica', 10)
         c.setFillColorRGB(0.086, 0.643, 0.29)
-        c.drawString(40, y-18, '● Status: Approved')
+        c.drawString(40, y-18, f'● Status: {payroll_obj.status}')
         c.setFillColorRGB(0, 0, 0)
 
         y -= 36
@@ -706,18 +737,16 @@ def payslip_pdf(request):
             return sy - 24
 
         y = draw_section('Earnings', [
-            ('Base Salary',  float(payroll_obj.base_salary)),
+            ('Base Salary',  float(payroll_obj.basic_salary)),
             ('Allowance',    float(payroll_obj.allowance)),
-            ('Benefits',     float(payroll_obj.benefits)),
             ('Overtime Pay', float(payroll_obj.overtime_pay)),
-        ], 'Total Earning', float(payroll_obj.total_earning), y)
+        ], 'Total Earning (Gross)', float(payroll_obj.gross_salary), y)
         y -= 8
 
         y = draw_section('Deductions', [
-            ('BPJS Kesehatan (1%)', float(payroll_obj.bpjs)),
-            ('Late Deduction',      float(payroll_obj.late_deduction)),
-            ('PPh21',               float(payroll_obj.pph21)),
-        ], 'Total Deduction', float(payroll_obj.total_deduction), y)
+            ('Absence Deduction', float(payroll_obj.deduction)),
+            ('Late Penalty',      float(payroll_obj.late_penalty)),
+        ], 'Total Deduction', float(payroll_obj.deduction + payroll_obj.late_penalty), y)
         y -= 16
 
         c.setFillColorRGB(0.118, 0.227, 0.373)

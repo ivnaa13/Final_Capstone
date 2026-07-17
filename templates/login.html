@@ -4,27 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — HR System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --navy:      #1e3a5f;
-            --navy-dark: #162d4a;
-            --navy-mid:  #2d4a7a;
-            --bg-outer:  #dce4ef;
+            /* ==== Palette dari gambar ==== */
+            --navy:      #022E4C;   /* HEX #022E4C */
+            --navy-dark: #011F35;   /* turunan lebih gelap untuk hover/tombol */
+            --blue-mid:  #517493;   /* HEX #517493 */
+            --maroon:    #56061D;   /* HEX #56061D */
+
+            --bg-outer:  #d7dee6;
             --white:     #ffffff;
             --border:    #d0d8e4;
-            --text:      #1e3a5f;
+            --text:      #022E4C;
             --muted:     #7a8fa6;
-            --red:       #e74c3c;
             --font:      'Plus Jakarta Sans', sans-serif;
         }
 
         body {
             font-family: var(--font);
-            background: var(--bg-outer);
+            background: linear-gradient(160deg, #e8ecf1 0%, #d7dee6 60%, #cdd6e2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -33,34 +35,76 @@
         }
 
         .outer-box {
-            background: var(--navy);
-            border-radius: 16px;
+            background: linear-gradient(160deg, var(--navy) 0%, var(--blue-mid) 100%);
+            border-radius: 18px;
             padding: 48px 40px;
             width: 100%;
             max-width: 520px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 20px 60px rgba(30,58,95,.35);
+            box-shadow: 0 20px 60px rgba(2,46,76,.4);
+        }
+
+        /* ===== Logo / Branding ===== */
+        .brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 26px;
+        }
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .brand-logo .icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: var(--maroon);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--white);
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(86,6,29,.4);
+        }
+        .brand-logo .name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: .5px;
+        }
+        .brand-logo .name span { color: var(--maroon-light, #ff8a80); }
+        .brand-sub {
+            font-size: .78rem;
+            font-weight: 500;
+            color: #cfe0ee;
+            letter-spacing: .5px;
+            text-transform: uppercase;
         }
 
         .login-card {
             background: var(--white);
-            border-radius: 10px;
-            padding: 40px 36px 36px;
+            border-radius: 12px;
+            padding: 36px 34px 32px;
             width: 100%;
             max-width: 360px;
-            border: 2px solid #4a7ab5;
+            border: 1px solid rgba(255,255,255,.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,.15);
         }
 
-        .card-header { text-align: center; margin-bottom: 28px; }
+        .card-header { text-align: center; margin-bottom: 26px; }
         .card-header h1 {
-            font-size: 1.2rem;
+            font-size: 1.05rem;
             font-weight: 700;
             color: var(--text);
-            letter-spacing: .5px;
-            text-transform: uppercase;
-            margin-bottom: 6px;
+            letter-spacing: .3px;
+            margin-bottom: 4px;
         }
         .card-header p { font-size: .8rem; color: var(--muted); }
 
@@ -72,15 +116,15 @@
         }
         .alert-box ul { list-style: none; }
         .alert-error {
-            background: #fef2f2;
-            border: 1px solid #fca5a5;
-            color: var(--red);
+            background: #fdf0f1;
+            border: 1px solid #e6a5ac;
+            color: var(--maroon);
         }
         .alert-error li::before { content: '⚠ '; }
         .alert-info {
-            background: #eff6ff;
-            border: 1px solid #93c5fd;
-            color: #1e40af;
+            background: #eef4f8;
+            border: 1px solid #a9c3d6;
+            color: var(--navy);
         }
         .alert-info li::before { content: 'ℹ '; }
 
@@ -106,7 +150,7 @@
             outline: none;
             transition: border-color .2s;
         }
-        .form-control:focus { border-bottom-color: var(--navy); }
+        .form-control:focus { border-bottom-color: var(--blue-mid); }
         .form-control::placeholder { color: #b8c8d8; }
 
         .toggle-pw {
@@ -126,7 +170,7 @@
             transform-origin: center;
         }
         .captcha-error {
-            color: var(--red);
+            color: var(--maroon);
             font-size: .75rem;
             text-align: center;
             margin-top: -6px;
@@ -137,7 +181,7 @@
         .btn-login {
             width: 100%;
             padding: 12px;
-            background: var(--navy-dark);
+            background: var(--navy);
             color: var(--white);
             border: none;
             border-radius: 8px;
@@ -150,7 +194,8 @@
             margin-top: 10px;
             transition: background .2s, transform .15s;
         }
-        .btn-login:hover { background: var(--navy-mid); transform: translateY(-1px); }
+        .btn-login:hover { background: var(--blue-mid); transform: translateY(-1px); }
+        .btn-login:active { background: var(--maroon); }
 
         .info-text {
             text-align: center;
@@ -175,11 +220,20 @@
 <body>
 
 <div class="outer-box">
+
+    <!-- ===== Logo / Branding ===== -->
+    <div class="brand">
+        <div class="brand-logo">
+            <div class="name">garuda<span>tv</span></div>
+        </div>
+        <div class="brand-sub">Smart Attendance System</div>
+    </div>
+
     <div class="login-card">
 
         <div class="card-header">
-            <h1>Welcome GARUDA TV</h1>
-            <p>Sign in to your System account</p>
+            <h1>Welcome Back</h1>
+            <p>Please login to your account</p>
         </div>
 
         {% if form.non_field_errors %}

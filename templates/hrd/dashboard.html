@@ -5,10 +5,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
     :root {
-        --navy:#1e3a5f; --navy-dk:#162d4a; --navy-md:#2d4a7a; --navy-light:#3a5a8f;
-        --card:#0f1f38; --bg:#0a1628; --white:#fff; --border:rgba(255,255,255,0.07);
-        --text:#e8f0fb; --muted:#8aaac8; --font:'Plus Jakarta Sans',sans-serif;
-        --accent:#3b82f6; --accent-l:#60a5fa;
+        /* ==== Palette (sinkron dengan base.html --pov-hrd) ==== */
+        --navy:      #022e4c;   /* HEX #022E4C */
+        --navy-dk:   #011f35;
+        --navy-md:   #0f425f;
+        --navy-light:#14415f;
+
+        --card:      #0f3a56;   /* sama dengan --bg-card di base.html */
+        --card-hover:#14415f;
+        --bg:        #022e4c;   /* sama dengan --bg-content di base.html */
+
+        --white:#fff; --border:rgba(255,255,255,0.14);
+        --text:#ffffff; --muted:#a9c2d6; --font:'Plus Jakarta Sans',sans-serif;
+
+        --accent:  #517493;     /* HEX #517493 */
+        --accent-l:#6f8fac;
+        --accent2: #56061d;     /* HEX #56061D */
+        --accent2-l:#7a1e3a;
     }
 
     .welcome {
@@ -25,12 +38,12 @@
         gap: 12px; margin-bottom: 14px;
     }
     .kpi {
-        background: #132032; border: 1px solid var(--border);
+        background: var(--card); border: 1px solid var(--border);
         border-radius: 12px; padding: 16px 18px;
         display: flex; align-items: center; justify-content: space-between;
         transition: background .2s;
     }
-    .kpi:hover { background: #1a2e4a; }
+    .kpi:hover { background: var(--card-hover); }
     .kpi-l {
         font-size: .63rem; font-weight: 700; color: var(--muted);
         text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
@@ -43,9 +56,9 @@
         font-size: 1.05rem; flex-shrink: 0;
     }
     .ic-g { background: rgba(22,163,74,.18);  color: #4ade80; }
-    .ic-r { background: rgba(220,38,38,.18);  color: #f87171; }
+    .ic-r { background: rgba(122,30,58,.28);  color: #f4a3b8; }
     .ic-o { background: rgba(217,119,6,.18);  color: #fbbf24; }
-    .ic-b { background: rgba(59,130,246,.18); color: #60a5fa; }
+    .ic-b { background: rgba(81,116,147,.28); color: #a9c8de; }
 
     /* ── CHARTS ROW ──────────────────────────────────── */
     .charts-row {
@@ -53,7 +66,7 @@
         gap: 14px; margin-bottom: 14px;
     }
     .chart-card {
-        background: #132032; border: 1px solid var(--border);
+        background: var(--card); border: 1px solid var(--border);
         border-radius: 14px; padding: 16px;
     }
     .chart-card-hdr {
@@ -80,7 +93,7 @@
 
     /* Pie card */
     .pie-card {
-        background: #132032; border: 1px solid var(--border);
+        background: var(--card); border: 1px solid var(--border);
         border-radius: 14px; padding: 16px;
         display: flex; flex-direction: column;
     }
@@ -101,7 +114,7 @@
 
     /* ── TABLE ───────────────────────────────────────── */
     .tbl-card {
-        background: #132032; border: 1px solid var(--border);
+        background: var(--card); border: 1px solid var(--border);
         border-radius: 12px; overflow: hidden; margin-bottom: 14px;
     }
     .tbl-hdr {
@@ -112,8 +125,8 @@
     .tbl-hdr-right { display: flex; align-items: center; gap: 8px; }
     .tbl-badge-today {
         font-size: .65rem; font-weight: 700; padding: 3px 9px;
-        border-radius: 20px; background: rgba(59,130,246,.15);
-        color: var(--accent-l); border: 1px solid rgba(59,130,246,.25);
+        border-radius: 20px; background: rgba(81,116,147,.22);
+        color: #cfe0ec; border: 1px solid rgba(81,116,147,.4);
     }
 
     /* Filter chips */
@@ -125,7 +138,7 @@
         transition: all .15s;
     }
     .chip:hover { background: rgba(255,255,255,.08); color: var(--text); }
-    .chip.active { background: rgba(59,130,246,.18); color: var(--accent-l); border-color: rgba(59,130,246,.3); }
+    .chip.active { background: rgba(86,6,29,.28); color: #f2b9c6; border-color: rgba(86,6,29,.5); }
 
     .tbl-wrap { overflow-x: auto; }
     .hrd-table { width: 100%; border-collapse: collapse; }
@@ -137,11 +150,11 @@
         border-bottom: 1px solid var(--border);
     }
     .hrd-table td {
-        padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.04);
+        padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.06);
         color: var(--text); font-size: .8rem; vertical-align: middle;
     }
     .hrd-table tr:last-child td { border-bottom: none; }
-    .hrd-table tr:hover td { background: rgba(255,255,255,.03); }
+    .hrd-table tr:hover td { background: rgba(255,255,255,.04); }
 
     .emp-cell { display: flex; align-items: center; gap: 10px; }
     .emp-av-txt {
@@ -160,14 +173,14 @@
     }
     .b-present { background: rgba(22,163,74,.2);  color: #86efac; border: 1px solid rgba(22,163,74,.3); }
     .b-late    { background: rgba(217,119,6,.2);  color: #fcd34d; border: 1px solid rgba(217,119,6,.3); }
-    .b-absent  { background: rgba(220,38,38,.15); color: #fca5a5; border: 1px solid rgba(220,38,38,.25); }
+    .b-absent  { background: rgba(86,6,29,.28);   color: #f2b9c6; border: 1px solid rgba(86,6,29,.5); }
 
     .clk-val { color: var(--text); font-weight: 500; }
-    .clk-miss { color: #f87171; font-weight: 600; font-size: .75rem; }
+    .clk-miss { color: #f2b9c6; font-weight: 600; font-size: .75rem; }
     .dur-chip {
         display: inline-block; padding: 2px 8px; border-radius: 6px;
         font-size: .67rem; font-weight: 600;
-        background: rgba(59,130,246,.1); color: var(--accent-l);
+        background: rgba(81,116,147,.18); color: #cfe0ec;
     }
 
     /* Empty state */
@@ -254,7 +267,7 @@
                 <div class="chart-card-sub">Last 7 days — Present vs Late</div>
             </div>
             <div class="chart-legend">
-                <div class="chart-leg-item"><div class="chart-leg-dot" style="background:#3b82f6"></div>Present</div>
+                <div class="chart-leg-item"><div class="chart-leg-dot" style="background:#517493"></div>Present</div>
                 <div class="chart-leg-item"><div class="chart-leg-dot" style="background:#fbbf24"></div>Late</div>
             </div>
         </div>
@@ -336,7 +349,8 @@ const BAR_PRESENT = JSON.parse(document.getElementById('barPresent').textContent
 const BAR_LATE    = JSON.parse(document.getElementById('barLate').textContent);
 const PIE_LABELS  = JSON.parse(document.getElementById('pieLabels').textContent);
 const PIE_VALUES  = JSON.parse(document.getElementById('pieValues').textContent);
-const PIE_COLORS = ['#3b82f6','#ef4444','#10b981','#f59e0b','#a855f7','#06b6d4','#ec4899','#84cc16'];
+/* Palet warna pie mengikuti brand: navy, blue-grey, maroon + variasi turunannya */
+const PIE_COLORS = ['#517493','#56061d','#022e4c','#7a1e3a','#6f8fac','#a9c2d6','#d97706','#4ade80'];
 
 function initCharts() {
     new Chart(document.getElementById('barChart'), {
@@ -347,7 +361,7 @@ function initCharts() {
                 {
                     label: 'Present',
                     data: BAR_PRESENT,
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: '#517493',
                     borderRadius: 4,
                     barPercentage: .45
                 },
@@ -374,11 +388,11 @@ function initCharts() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#8aaac8', font: { size: 10 } }
+                    ticks: { color: '#a9c2d6', font: { size: 10 } }
                 },
                 y: {
-                    grid: { color: 'rgba(255,255,255,.05)' },
-                    ticks: { color: '#8aaac8', font: { size: 9 }, stepSize: 1, precision: 0 },
+                    grid: { color: 'rgba(255,255,255,.06)' },
+                    ticks: { color: '#a9c2d6', font: { size: 9 }, stepSize: 1, precision: 0 },
                     min: 0
                 }
             }
@@ -393,7 +407,7 @@ function initCharts() {
             datasets: [{
                 data: hasData ? PIE_VALUES : [1],
                 backgroundColor: hasData ? PIE_COLORS.slice(0, PIE_LABELS.length) : ['rgba(255,255,255,.1)'],
-                borderColor: '#132032',
+                borderColor: '#0f3a56',
                 borderWidth: 2,
                 hoverOffset: 5
             }]
@@ -433,7 +447,7 @@ const PER_PAGE = 10;
 let dashPage = 1, activeFilter = 'all', filteredData = [...ATT_RAW];
 
 function avatarBg(name) {
-    const cs = ['#3b82f6','#06b6d4','#10b981','#a855f7','#ef4444','#f59e0b','#ec4899','#84cc16'];
+    const cs = ['#517493','#022e4c','#56061d','#7a1e3a','#6f8fac','#d97706','#4ade80','#a9c2d6'];
     return cs[(name || ' ').charCodeAt(0) % cs.length];
 }
 function initials(name) {
@@ -500,7 +514,7 @@ function renderDashTable() {
             <td>${cinHtml}</td>
             <td>${coutHtml}</td>
             <td>${durHtml}</td>
-            <td style="font-size:.72rem;color:#8aaac8;">${r.dept}</td>
+            <td style="font-size:.72rem;color:#a9c2d6;">${r.dept}</td>
         </tr>`;
     }).join('');
 
